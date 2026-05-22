@@ -16,6 +16,7 @@
 //! GPU offload is used when body count >= [`GPU_BODY_THRESHOLD`].
 
 use glam::Vec3;
+use wgpu::util::DeviceExt;
 
 use crate::compute::{compute_workgroup_count, read_buffer_sync, ComputeDispatcher};
 use crate::context::WgpuContext;
@@ -39,7 +40,7 @@ pub struct GpuAabb {
     pub min: [f32; 3],
     pub entity_id: u32,
     pub max: [f32; 3],
-    pub _padding: u32,
+    pub padding: u32,
 }
 
 /// GPU collision pair output.
@@ -65,7 +66,7 @@ pub struct GpuBody {
     pub torque_accumulator: [f32; 3],
     pub angular_damping: f32,
     pub inertia_diag: [f32; 3],
-    pub _padding: f32,
+    pub padding: f32,
     pub rotation: [f32; 4],
 }
 
@@ -103,8 +104,8 @@ pub struct GpuShapeData {
 pub struct NarrowphaseResult {
     pub entity_a: u32,
     pub entity_b: u32,
-    pub _pad0: u32,
-    pub _pad1: u32,
+    pub pad0: u32,
+    pub pad1: u32,
     pub normal: [f32; 3],
     pub penetration: f32,
     pub point: [f32; 3],
@@ -264,10 +265,10 @@ impl GpuPhysics {
             .build()?;
 
         // Broadphase buffers
-        let aabb_size = (max_bodies * std::mem::size_of::<GpuAabb>()) as u64;
+        let aabb_size = (max_bodies * size_of::<GpuAabb>()) as u64;
         let aabb_buffer = StorageBuffer::new(ctx, aabb_size, Some("aabb buffer"));
 
-        let pair_size = (MAX_PAIRS as usize * std::mem::size_of::<CollisionPair>()) as u64;
+        let pair_size = (MAX_PAIRS as usize * size_of::<CollisionPair>()) as u64;
         let pair_buffer = StorageBuffer::new(ctx, pair_size, Some("pair buffer"));
 
         // pair_count: single u32, atomic
@@ -328,7 +329,7 @@ impl GpuPhysics {
             .build()?;
 
         // Body buffer
-        let body_size = (max_bodies * std::mem::size_of::<GpuBody>()) as u64;
+        let body_size = (max_bodies * size_of::<GpuBody>()) as u64;
         let body_buffer = StorageBuffer::new(ctx, body_size, Some("body buffer"));
 
         // --- Narrowphase pipeline ---
@@ -400,14 +401,14 @@ impl GpuPhysics {
 
         let max_narrowphase_pairs = MAX_PAIRS as usize;
         let narrowphase_pair_size =
-            (max_narrowphase_pairs * std::mem::size_of::<CollisionPair>()) as u64;
+            (max_narrowphase_pairs * size_of::<CollisionPair>()) as u64;
         let narrowphase_pair_buffer =
             StorageBuffer::new(ctx, narrowphase_pair_size, Some("narrowphase pair buffer"));
 
-        let shape_size = (max_bodies * std::mem::size_of::<GpuShapeData>()) as u64;
+        let shape_size = (max_bodies * size_of::<GpuShapeData>()) as u64;
         let shape_buffer = StorageBuffer::new(ctx, shape_size, Some("shape buffer"));
 
-        let result_size = (max_narrowphase_pairs * std::mem::size_of::<NarrowphaseResult>()) as u64;
+        let result_size = (max_narrowphase_pairs * size_of::<NarrowphaseResult>()) as u64;
         let narrowphase_result_buffer =
             StorageBuffer::new(ctx, result_size, Some("narrowphase result buffer"));
 
@@ -449,9 +450,8 @@ impl GpuPhysics {
         let mut entity_map = Vec::new();
         let mut max_extent: f32 = 0.0;
 
-        for (entity, (collider, transform, rb)) in world
+        for (entity, (collider, transform, rb)) in &mut world
             .query::<(&Collider, &GlobalTransform, &RigidBody)>()
-            .iter()
         {
             if collider.is_sensor {
                 continue;
@@ -472,7 +472,7 @@ impl GpuPhysics {
                 min: aabb.min.into(),
                 entity_id: idx,
                 max: aabb.max.into(),
-                _padding: rb.body_type as u32,
+                padding: rb.body_type as u32,
             });
             entity_map.push(entity);
         }
@@ -482,7 +482,7 @@ impl GpuPhysics {
         }
 
         // Reset pair count to 0
-        self.pair_count_buffer.write(ctx, &[0u32]);
+        self.pair_count_buffer.write(ctx, &[0_u32]);
 
         (aabbs.len() as u32, entity_map, max_extent)
     }
@@ -514,7 +514,7 @@ impl GpuPhysics {
             _pad0: 0,
         };
 
-        use wgpu::util::DeviceExt;
+
         let params_buffer = ctx
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -588,7 +588,7 @@ impl GpuPhysics {
             return Vec::new();
         }
 
-        let read_size = (pair_count as usize * std::mem::size_of::<CollisionPair>()) as u64;
+        let read_size = (pair_count as usize * size_of::<CollisionPair>()) as u64;
         let mut pairs: Vec<CollisionPair> =
             read_buffer_sync(ctx, self.pair_buffer.buffer(), read_size);
         pairs.truncate(pair_count as usize);
@@ -708,25 +708,25 @@ impl GpuPhysics {
                 .get::<&Collider>(entity_a)
                 .ok()
                 .map(|c| match c.shape {
-                    ColliderShape::Sphere { .. } => 0u8,
-                    ColliderShape::Box { .. } => 1u8,
-                    _ => 255u8,
+                    ColliderShape::Sphere { .. } => 0_u8,
+                    ColliderShape::Box { .. } => 1_u8,
+                    _ => 255_u8,
                 });
             let b_shape = world
                 .get::<&Collider>(entity_b)
                 .ok()
                 .map(|c| match c.shape {
-                    ColliderShape::Sphere { .. } => 0u8,
-                    ColliderShape::Box { .. } => 1u8,
-                    _ => 255u8,
+                    ColliderShape::Sphere { .. } => 0_u8,
+                    ColliderShape::Box { .. } => 1_u8,
+                    _ => 255_u8,
                 });
 
-            let pair_gpu_compatible = match (a_shape, b_shape) {
-                (Some(0), Some(0)) => true, // sphere-sphere
-                (Some(0), Some(1)) => true, // sphere-box
-                (Some(1), Some(0)) => true, // box-sphere
-                _ => false,                 // box-box, other combos → CPU
-            };
+            // Supported on GPU: sphere-sphere, sphere-box, box-sphere.
+            // box-box and other combos fall back to CPU narrowphase.
+            let pair_gpu_compatible = matches!(
+                (a_shape, b_shape),
+                (Some(0), Some(0 | 1)) | (Some(1), Some(0))
+            );
 
             if pair_gpu_compatible {
                 gpu_pairs.push(CollisionPair {
@@ -743,8 +743,8 @@ impl GpuPhysics {
         if gpu_pair_count > 0 {
             self.narrowphase_pair_buffer.write(ctx, &gpu_pairs);
 
-            use wgpu::util::DeviceExt;
-            let params_data = [gpu_pair_count, 0u32, 0u32, 0u32];
+    
+            let params_data = [gpu_pair_count, 0_u32, 0_u32, 0_u32];
             let params_buffer = ctx
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -803,8 +803,8 @@ impl GpuPhysics {
             return;
         }
 
-        use wgpu::util::DeviceExt;
-        let params_data = [pair_count, 0u32, 0u32, 0u32];
+
+        let params_data = [pair_count, 0_u32, 0_u32, 0_u32];
         let params_buffer = ctx
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -862,7 +862,7 @@ impl GpuPhysics {
             return Vec::new();
         }
 
-        let read_size = (pair_count as usize * std::mem::size_of::<NarrowphaseResult>()) as u64;
+        let read_size = (pair_count as usize * size_of::<NarrowphaseResult>()) as u64;
         let results: Vec<NarrowphaseResult> =
             read_buffer_sync(ctx, self.narrowphase_result_buffer.buffer(), read_size);
 
@@ -884,12 +884,11 @@ impl GpuPhysics {
         let mut bodies = Vec::new();
         let mut entity_map = Vec::new();
 
-        for (entity, (rb, transform)) in world
+        for (entity, (rb, transform)) in &mut world
             .query::<(&RigidBody, &crate::ecs::components::transform::Transform)>()
-            .iter()
         {
             let body_type = match rb.body_type {
-                RigidBodyType::Dynamic => 0u32,
+                RigidBodyType::Dynamic => 0_u32,
                 RigidBodyType::Static => 1,
                 RigidBodyType::Kinematic => 2,
             };
@@ -910,7 +909,7 @@ impl GpuPhysics {
                     rb.inertia_tensor[4],
                     rb.inertia_tensor[8],
                 ],
-                _padding: 0.0,
+                padding: 0.0,
                 rotation: [
                     transform.rotation.x,
                     transform.rotation.y,
@@ -981,7 +980,7 @@ impl GpuPhysics {
         body_count: u32,
         params: &IntegrateParams,
     ) {
-        use wgpu::util::DeviceExt;
+
         let params_buffer = ctx
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -1030,7 +1029,7 @@ impl GpuPhysics {
             return;
         }
 
-        let read_size = (body_count as usize * std::mem::size_of::<GpuBody>()) as u64;
+        let read_size = (body_count as usize * size_of::<GpuBody>()) as u64;
         let gpu_bodies: Vec<GpuBody> = read_buffer_sync(ctx, self.body_buffer.buffer(), read_size);
 
         for (gpu_body, entity) in gpu_bodies.iter().zip(entity_map.iter()) {
@@ -1074,27 +1073,27 @@ mod tests {
 
     #[test]
     fn test_gpu_aabb_layout() {
-        assert_eq!(std::mem::size_of::<GpuAabb>(), 32);
+        assert_eq!(size_of::<GpuAabb>(), 32);
     }
 
     #[test]
     fn test_collision_pair_layout() {
-        assert_eq!(std::mem::size_of::<CollisionPair>(), 8);
+        assert_eq!(size_of::<CollisionPair>(), 8);
     }
 
     #[test]
     fn test_gpu_body_layout() {
-        assert_eq!(std::mem::size_of::<GpuBody>(), 112);
+        assert_eq!(size_of::<GpuBody>(), 112);
     }
 
     #[test]
     fn test_broadphase_params_layout() {
-        assert_eq!(std::mem::size_of::<BroadphaseParams>(), 16);
+        assert_eq!(size_of::<BroadphaseParams>(), 16);
     }
 
     #[test]
     fn test_integrate_params_layout() {
-        assert_eq!(std::mem::size_of::<IntegrateParams>(), 32);
+        assert_eq!(size_of::<IntegrateParams>(), 32);
     }
 
     #[test]
@@ -1107,12 +1106,12 @@ mod tests {
     #[test]
     fn test_narrowphase_result_layout() {
         // Must match WGSL struct with vec3<f32> alignment (48 bytes, not 40)
-        assert_eq!(std::mem::size_of::<NarrowphaseResult>(), 48);
+        assert_eq!(size_of::<NarrowphaseResult>(), 48);
     }
 
     #[test]
     fn test_gpu_shape_data_layout() {
         // Must match WGSL ShapeData struct (80 bytes)
-        assert_eq!(std::mem::size_of::<GpuShapeData>(), 80);
+        assert_eq!(size_of::<GpuShapeData>(), 80);
     }
 }

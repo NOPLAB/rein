@@ -27,7 +27,7 @@ impl VertexBuffer {
         Self {
             buffer,
             count: vertices.len() as u32,
-            stride: std::mem::size_of::<V>() as u64,
+            stride: size_of::<V>() as u64,
         }
     }
 
@@ -139,7 +139,7 @@ impl<T: Pod + Zeroable> UniformBuffer<T> {
         let bind_group_layout =
             ctx.device
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: label.map(|l| format!("{} layout", l)).as_deref(),
+                    label: label.map(|l| format!("{l} layout")).as_deref(),
                     entries: &[wgpu::BindGroupLayoutEntry {
                         binding,
                         visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
@@ -153,7 +153,7 @@ impl<T: Pod + Zeroable> UniformBuffer<T> {
                 });
 
         let bind_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: label.map(|l| format!("{} bind group", l)).as_deref(),
+            label: label.map(|l| format!("{l} bind group")).as_deref(),
             layout: &bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
                 binding,
@@ -324,7 +324,7 @@ mod tests {
         };
         let data: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
         let buf = StorageBuffer::from_data(&ctx, &data, Some("test"));
-        assert_eq!(buf.size(), (4 * std::mem::size_of::<f32>()) as u64);
+        assert_eq!(buf.size(), (4 * size_of::<f32>()) as u64);
     }
 
     #[test]

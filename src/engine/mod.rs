@@ -78,8 +78,6 @@ pub fn run_app<A: App + 'static>(
     use crate::ecs::systems::{culling_system, render_system, transform_system};
     use crate::window::{screen_target, FrameOutput, Window};
 
-    let window = Window::new(settings)?;
-
     struct EngineState<A: App> {
         app: A,
         world: hecs::World,
@@ -87,6 +85,8 @@ pub fn run_app<A: App + 'static>(
         initialized: bool,
         accumulator: f64,
     }
+
+    let window = Window::new(settings)?;
 
     let state = EngineState {
         app,
@@ -107,7 +107,7 @@ pub fn run_app<A: App + 'static>(
 
         // Fixed timestep loop
         state.accumulator += frame.delta_time;
-        let mut substeps = 0u32;
+        let mut substeps = 0_u32;
         while state.accumulator >= state.config.fixed_timestep
             && substeps < state.config.max_substeps
         {

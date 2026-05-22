@@ -25,7 +25,7 @@ pub fn solve_contacts(
     }
 }
 
-fn solve_manifold(manifold: &mut ContactManifold, world: &mut hecs::World) {
+fn solve_manifold(manifold: &mut ContactManifold, world: &hecs::World) {
     // Read rigid body data and positions for both entities
     let (rb_a_data, rb_b_data) = {
         let rb_a = world.get::<&RigidBody>(manifold.entity_a).ok();
@@ -33,26 +33,22 @@ fn solve_manifold(manifold: &mut ContactManifold, world: &mut hecs::World) {
         let pos_a = world
             .get::<&GlobalTransform>(manifold.entity_a)
             .ok()
-            .map(|t| t.0.transform_point3(Vec3::ZERO))
-            .unwrap_or(Vec3::ZERO);
+            .map_or(Vec3::ZERO, |t| t.0.transform_point3(Vec3::ZERO));
         let pos_b = world
             .get::<&GlobalTransform>(manifold.entity_b)
             .ok()
-            .map(|t| t.0.transform_point3(Vec3::ZERO))
-            .unwrap_or(Vec3::ZERO);
+            .map_or(Vec3::ZERO, |t| t.0.transform_point3(Vec3::ZERO));
 
         let a = rb_a.map(|rb| RbData::from_rb(&rb, pos_a));
         let b = rb_b.map(|rb| RbData::from_rb(&rb, pos_b));
         (a, b)
     };
 
-    let rb_a_data = match rb_a_data {
-        Some(d) => d,
-        None => return,
+    let Some(rb_a_data) = rb_a_data else {
+        return;
     };
-    let rb_b_data = match rb_b_data {
-        Some(d) => d,
-        None => return,
+    let Some(rb_b_data) = rb_b_data else {
+        return;
     };
 
     // Skip if both are static/kinematic
@@ -117,13 +113,11 @@ fn solve_manifold(manifold: &mut ContactManifold, world: &mut hecs::World) {
             let pos_a = world
                 .get::<&GlobalTransform>(manifold.entity_a)
                 .ok()
-                .map(|t| t.0.transform_point3(Vec3::ZERO))
-                .unwrap_or(Vec3::ZERO);
+                .map_or(Vec3::ZERO, |t| t.0.transform_point3(Vec3::ZERO));
             let pos_b = world
                 .get::<&GlobalTransform>(manifold.entity_b)
                 .ok()
-                .map(|t| t.0.transform_point3(Vec3::ZERO))
-                .unwrap_or(Vec3::ZERO);
+                .map_or(Vec3::ZERO, |t| t.0.transform_point3(Vec3::ZERO));
             let a = world
                 .get::<&RigidBody>(manifold.entity_a)
                 .ok()
@@ -232,7 +226,7 @@ impl RbData {
 
 /// Apply an impulse to both bodies at the contact point.
 fn apply_impulse(
-    world: &mut hecs::World,
+    world: &hecs::World,
     entity_a: hecs::Entity,
     entity_b: hecs::Entity,
     impulse: Vec3,

@@ -107,7 +107,7 @@ where
         });
 
         let surface = instance
-            .create_surface(window.clone())
+            .create_surface(Arc::clone(&window))
             .expect("Failed to create surface");
 
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
@@ -122,8 +122,8 @@ where
             required_features: wgpu::Features::empty(),
             required_limits: wgpu::Limits::default(),
             memory_hints: wgpu::MemoryHints::Performance,
-            trace: Default::default(),
-            experimental_features: Default::default(),
+            trace: wgpu::Trace::default(),
+            experimental_features: wgpu::ExperimentalFeatures::default(),
         }))
         .expect("Failed to create device");
 
@@ -180,7 +180,7 @@ where
             return;
         };
 
-        let modifiers = event::Modifiers::default(); // TODO: Track modifiers
+        let modifiers = Modifiers::default(); // TODO: Track modifiers
 
         match event {
             WindowEvent::CloseRequested => {
@@ -218,9 +218,9 @@ where
             }
             WindowEvent::MouseInput { state, button, .. } => {
                 let button = match button {
-                    winit::event::MouseButton::Left => event::MouseButton::Left,
-                    winit::event::MouseButton::Right => event::MouseButton::Right,
-                    winit::event::MouseButton::Middle => event::MouseButton::Middle,
+                    winit::event::MouseButton::Left => MouseButton::Left,
+                    winit::event::MouseButton::Right => MouseButton::Right,
+                    winit::event::MouseButton::Middle => MouseButton::Middle,
                     _ => return,
                 };
                 match state {
@@ -257,7 +257,7 @@ where
             WindowEvent::KeyboardInput {
                 event: key_event, ..
             } => {
-                if let Some(key) = event::Key::from_winit(&key_event.logical_key) {
+                if let Some(key) = Key::from_winit(&key_event.logical_key) {
                     match key_event.state {
                         winit::event::ElementState::Pressed => {
                             self.events.push(Event::KeyPress {
@@ -300,7 +300,7 @@ where
                     .texture
                     .create_view(&wgpu::TextureViewDescriptor::default());
 
-                let viewport = frame_io::Viewport {
+                let viewport = Viewport {
                     x: 0,
                     y: 0,
                     width: graphics.config.width,

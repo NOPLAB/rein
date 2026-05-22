@@ -96,10 +96,12 @@ pub fn read_buffer_sync<T: bytemuck::Pod>(
     let slice = staging.slice(..);
     let (tx, rx) = std::sync::mpsc::channel();
     slice.map_async(wgpu::MapMode::Read, move |result| {
-        tx.send(result).unwrap();
+        tx.send(result).expect("readback channel receiver dropped before map_async completed");
     });
     let _ = ctx.device.poll(wgpu::PollType::wait_indefinitely());
-    rx.recv().unwrap().expect("Failed to map staging buffer");
+    rx.recv()
+        .expect("map_async callback never ran")
+        .expect("Failed to map staging buffer");
 
     let data = slice.get_mapped_range();
     let result: Vec<T> = bytemuck::cast_slice(&data).to_vec();
@@ -117,6 +119,10 @@ pub fn read_back<T: bytemuck::Pod>(ctx: &WgpuContext, buffer: &StorageBuffer) ->
 }
 
 /// Async version of [`read_back`]. Reads data from a `StorageBuffer` to the CPU.
+#[expect(
+    clippy::unused_async,
+    reason = "kept async to preserve the public API; the body currently uses blocking poll"
+)]
 pub async fn read_back_async<T: bytemuck::Pod>(
     ctx: &WgpuContext,
     buffer: &StorageBuffer,
@@ -137,10 +143,12 @@ pub async fn read_back_async<T: bytemuck::Pod>(
     let slice = staging.slice(..);
     let (tx, rx) = std::sync::mpsc::channel();
     slice.map_async(wgpu::MapMode::Read, move |result| {
-        tx.send(result).unwrap();
+        tx.send(result).expect("readback channel receiver dropped before map_async completed");
     });
     let _ = ctx.device.poll(wgpu::PollType::wait_indefinitely());
-    rx.recv().unwrap().expect("Failed to map staging buffer");
+    rx.recv()
+        .expect("map_async callback never ran")
+        .expect("Failed to map staging buffer");
 
     let data = slice.get_mapped_range();
     let result: Vec<T> = bytemuck::cast_slice(&data).to_vec();

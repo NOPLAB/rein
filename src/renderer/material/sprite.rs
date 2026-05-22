@@ -69,7 +69,7 @@ impl SpriteMaterial {
 
         let camera_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<CameraUniform>() as u64,
+            size_of::<CameraUniform>() as u64,
             Some("sprite camera uniform"),
         );
 
@@ -84,7 +84,7 @@ impl SpriteMaterial {
 
         let model_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<ModelUniform>() as u64,
+            size_of::<ModelUniform>() as u64,
             Some("sprite model uniform"),
         );
 

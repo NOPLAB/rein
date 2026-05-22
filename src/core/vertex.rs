@@ -28,7 +28,7 @@ impl VertexPNUC {
     /// Get the vertex buffer layout for this vertex type.
     pub const fn layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<VertexPNUC>() as wgpu::BufferAddress,
+            array_stride: size_of::<Self>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[
                 // position
@@ -39,19 +39,19 @@ impl VertexPNUC {
                 },
                 // normal
                 wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                    offset: size_of::<[f32; 3]>() as wgpu::BufferAddress,
                     shader_location: 1,
                     format: wgpu::VertexFormat::Float32x3,
                 },
                 // uv
                 wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 6]>() as wgpu::BufferAddress,
+                    offset: size_of::<[f32; 6]>() as wgpu::BufferAddress,
                     shader_location: 2,
                     format: wgpu::VertexFormat::Float32x2,
                 },
                 // color
                 wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 8]>() as wgpu::BufferAddress,
+                    offset: size_of::<[f32; 8]>() as wgpu::BufferAddress,
                     shader_location: 3,
                     format: wgpu::VertexFormat::Float32x4,
                 },
@@ -77,7 +77,7 @@ impl VertexPN {
     /// Get the vertex buffer layout for this vertex type.
     pub const fn layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<VertexPN>() as wgpu::BufferAddress,
+            array_stride: size_of::<Self>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[
                 // position
@@ -88,7 +88,7 @@ impl VertexPN {
                 },
                 // normal
                 wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                    offset: size_of::<[f32; 3]>() as wgpu::BufferAddress,
                     shader_location: 1,
                     format: wgpu::VertexFormat::Float32x3,
                 },
@@ -122,7 +122,7 @@ impl VertexPC {
     /// Get the vertex buffer layout for this vertex type.
     pub const fn layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<VertexPC>() as wgpu::BufferAddress,
+            array_stride: size_of::<Self>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[
                 // position
@@ -133,7 +133,7 @@ impl VertexPC {
                 },
                 // color
                 wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                    offset: size_of::<[f32; 3]>() as wgpu::BufferAddress,
                     shader_location: 1,
                     format: wgpu::VertexFormat::Float32x4,
                 },
@@ -158,7 +158,7 @@ impl VertexP {
     /// Get the vertex buffer layout for this vertex type.
     pub const fn layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<VertexP>() as wgpu::BufferAddress,
+            array_stride: size_of::<Self>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[
                 // position
@@ -178,10 +178,10 @@ mod tests {
 
     #[test]
     fn test_vertex_sizes() {
-        assert_eq!(std::mem::size_of::<VertexPNUC>(), 48); // 3+3+2+4 floats = 12 floats * 4 bytes
-        assert_eq!(std::mem::size_of::<VertexPN>(), 24); // 3+3 floats = 6 floats * 4 bytes
-        assert_eq!(std::mem::size_of::<VertexPC>(), 28); // 3+4 floats = 7 floats * 4 bytes
-        assert_eq!(std::mem::size_of::<VertexP>(), 12); // 3 floats = 3 floats * 4 bytes
+        assert_eq!(size_of::<VertexPNUC>(), 48); // 3+3+2+4 floats = 12 floats * 4 bytes
+        assert_eq!(size_of::<VertexPN>(), 24); // 3+3 floats = 6 floats * 4 bytes
+        assert_eq!(size_of::<VertexPC>(), 28); // 3+4 floats = 7 floats * 4 bytes
+        assert_eq!(size_of::<VertexP>(), 12); // 3 floats = 3 floats * 4 bytes
     }
 
     #[test]

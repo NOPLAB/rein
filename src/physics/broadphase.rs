@@ -1,6 +1,6 @@
 //! Broadphase collision detection using spatial hash grid.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use glam::Vec3;
 
@@ -53,9 +53,8 @@ impl SpatialHashGrid {
         let mut entries: Vec<(hecs::Entity, PhysicsAabb, RigidBodyType)> = Vec::new();
         let mut max_extent: f32 = 0.0;
 
-        for (entity, (collider, transform, rb)) in world
+        for (entity, (collider, transform, rb)) in &mut world
             .query::<(&Collider, &GlobalTransform, &RigidBody)>()
-            .iter()
         {
             if collider.is_sensor {
                 continue;
@@ -96,7 +95,7 @@ impl SpatialHashGrid {
 
         // Find pairs within each cell
         let mut pairs = Vec::with_capacity(entries.len() * 4);
-        let mut seen = HashMap::new();
+        let mut seen = HashSet::new();
 
         for cell in self.cells.values() {
             for i in 0..cell.len() {
@@ -116,12 +115,12 @@ impl SpatialHashGrid {
                         (entity_b, entity_a)
                     };
 
-                    if seen.contains_key(&pair) {
+                    if seen.contains(&pair) {
                         continue;
                     }
 
                     if aabb_a.overlaps(aabb_b) {
-                        seen.insert(pair, ());
+                        seen.insert(pair);
                         pairs.push(pair);
                     }
                 }

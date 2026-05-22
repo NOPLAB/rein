@@ -38,7 +38,7 @@ impl PrimitiveRenderer {
 
         let vertex_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("GUI Vertex Buffer"),
-            size: 1024 * std::mem::size_of::<Vertex>() as u64,
+            size: 1024 * size_of::<Vertex>() as u64,
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -47,7 +47,7 @@ impl PrimitiveRenderer {
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("GUI Screen Buffer"),
-                contents: bytemuck::cast_slice(&[0.0f32; 4]),
+                contents: bytemuck::cast_slice(&[0.0_f32; 4]),
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
 
@@ -93,7 +93,7 @@ impl PrimitiveRenderer {
                     module: &shader,
                     entry_point: Some("vs_main"),
                     buffers: &[wgpu::VertexBufferLayout {
-                        array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
+                        array_stride: size_of::<Vertex>() as wgpu::BufferAddress,
                         step_mode: wgpu::VertexStepMode::Vertex,
                         attributes: &[
                             wgpu::VertexAttribute {
@@ -174,7 +174,6 @@ impl PrimitiveRenderer {
         );
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn push_quad(
         &mut self,
         x: f32,
@@ -220,14 +219,19 @@ impl PrimitiveRenderer {
             return;
         }
 
-        if self.screen_size != [width as f32, height as f32] {
-            self.screen_size = [width as f32, height as f32];
+        let new_size = [width as f32, height as f32];
+        // Sizes originate from integer pixel counts, so exact comparison is intentional
+        // and never sees NaN; we only want to skip the upload when nothing changed.
+        #[allow(clippy::float_cmp, reason = "screen size derived from integer pixel counts")]
+        let size_changed = self.screen_size != new_size;
+        if size_changed {
+            self.screen_size = new_size;
             let data = [width as f32, height as f32, 0.0, 0.0];
             ctx.queue
                 .write_buffer(&self.screen_buffer, 0, bytemuck::cast_slice(&data));
         }
 
-        let needed_size = (self.vertices.len() * std::mem::size_of::<Vertex>()) as u64;
+        let needed_size = (self.vertices.len() * size_of::<Vertex>()) as u64;
         if needed_size > self.vertex_buffer.size() {
             self.vertex_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("GUI Vertex Buffer"),
@@ -257,7 +261,7 @@ impl PrimitiveRenderer {
         pass.set_vertex_buffer(
             0,
             self.vertex_buffer
-                .slice(0..((self.vertices.len() * std::mem::size_of::<Vertex>()) as u64)),
+                .slice(0..((self.vertices.len() * size_of::<Vertex>()) as u64)),
         );
         pass.draw(0..self.vertices.len() as u32, 0..1);
     }

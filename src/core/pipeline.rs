@@ -132,9 +132,7 @@ impl<'a> PipelineBuilder<'a> {
                 });
 
         let depth_stencil = self
-            .depth_state
-            .map(|state| state.to_wgpu(DepthTexture::FORMAT))
-            .unwrap_or_else(|| DepthState::default().to_wgpu(DepthTexture::FORMAT));
+            .depth_state.map_or_else(|| DepthState::default().to_wgpu(DepthTexture::FORMAT), |state| state.to_wgpu(DepthTexture::FORMAT));
 
         let pipeline = self
             .ctx
@@ -343,7 +341,7 @@ impl Vertex {
     /// Get the vertex buffer layout for this vertex type.
     pub const fn layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
+            array_stride: size_of::<Self>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[
                 // position
@@ -354,13 +352,13 @@ impl Vertex {
                 },
                 // normal
                 wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                    offset: size_of::<[f32; 3]>() as wgpu::BufferAddress,
                     shader_location: 1,
                     format: wgpu::VertexFormat::Float32x3,
                 },
                 // color
                 wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 6]>() as wgpu::BufferAddress,
+                    offset: size_of::<[f32; 6]>() as wgpu::BufferAddress,
                     shader_location: 2,
                     format: wgpu::VertexFormat::Float32x3,
                 },

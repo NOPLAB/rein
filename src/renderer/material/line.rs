@@ -88,7 +88,7 @@ impl LineMaterial {
         // Create camera uniform buffer
         let camera_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<CameraUniform>() as u64,
+            size_of::<CameraUniform>() as u64,
             Some("line camera uniform"),
         );
 
@@ -104,7 +104,7 @@ impl LineMaterial {
         // Create model uniform buffer
         let model_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<ModelUniform>() as u64,
+            size_of::<ModelUniform>() as u64,
             Some("line model uniform"),
         );
 

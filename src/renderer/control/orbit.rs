@@ -105,7 +105,7 @@ impl OrbitControl {
     }
 
     /// Zoom the camera in/out.
-    fn zoom(&mut self, camera: &mut Camera, delta: f32) {
+    fn zoom(&self, camera: &mut Camera, delta: f32) {
         let to_camera = camera.position - self.target;
         let distance = to_camera.length();
         let direction = to_camera.normalize();

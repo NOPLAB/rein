@@ -62,7 +62,7 @@ impl UrdfLoader {
         info!("Loading URDF from {:?}", path);
 
         let robot = urdf_rs::read_file(path)
-            .with_context(|| format!("Failed to load URDF from {:?}", path))?;
+            .with_context(|| format!("Failed to load URDF from {}", path.display()))?;
 
         let mut link_visuals = Vec::new();
         let mut joints = Vec::new();

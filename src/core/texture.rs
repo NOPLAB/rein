@@ -43,7 +43,7 @@ impl Texture2D {
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
         let sampler = ctx.device.create_sampler(&wgpu::SamplerDescriptor {
-            label: label.map(|l| format!("{} sampler", l)).as_deref(),
+            label: label.map(|l| format!("{l} sampler")).as_deref(),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
@@ -117,7 +117,7 @@ impl Texture2D {
 
 /// A depth texture for depth testing.
 pub struct DepthTexture {
-    #[allow(dead_code)]
+    #[expect(dead_code, reason = "GPU resource kept alive to back the view; not read directly")]
     pub(crate) texture: wgpu::Texture,
     pub(crate) view: wgpu::TextureView,
     pub(crate) size: wgpu::Extent3d,
@@ -214,7 +214,7 @@ impl TextureCubeMap {
         });
 
         let sampler = ctx.device.create_sampler(&wgpu::SamplerDescriptor {
-            label: label.map(|l| format!("{} sampler", l)).as_deref(),
+            label: label.map(|l| format!("{l} sampler")).as_deref(),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
@@ -341,7 +341,7 @@ impl Texture2DArray {
             .collect();
 
         let sampler = ctx.device.create_sampler(&wgpu::SamplerDescriptor {
-            label: label.map(|l| format!("{} sampler", l)).as_deref(),
+            label: label.map(|l| format!("{l} sampler")).as_deref(),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             address_mode_w: wgpu::AddressMode::ClampToEdge,

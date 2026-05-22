@@ -18,8 +18,8 @@ use glam::Mat4;
 pub struct TerrainUniform {
     pub min_height: f32,
     pub max_height: f32,
-    pub _padding0: f32,
-    pub _padding1: f32,
+    pub padding0: f32,
+    pub padding1: f32,
     pub color_low: [f32; 4],
     pub color_high: [f32; 4],
 }
@@ -138,7 +138,7 @@ impl TerrainMaterial {
         // Create camera uniform buffer
         let camera_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<CameraUniform>() as u64,
+            size_of::<CameraUniform>() as u64,
             Some("terrain camera uniform"),
         );
 
@@ -154,7 +154,7 @@ impl TerrainMaterial {
         // Create model uniform buffer
         let model_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<ModelUniform>() as u64,
+            size_of::<ModelUniform>() as u64,
             Some("terrain model uniform"),
         );
 
@@ -170,7 +170,7 @@ impl TerrainMaterial {
         // Create terrain uniform buffer
         let terrain_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<TerrainUniform>() as u64,
+            size_of::<TerrainUniform>() as u64,
             Some("terrain params uniform"),
         );
 
@@ -232,8 +232,8 @@ impl Material for TerrainMaterial {
         let terrain_uniform = TerrainUniform {
             min_height: self.min_height,
             max_height: self.max_height,
-            _padding0: 0.0,
-            _padding1: 0.0,
+            padding0: 0.0,
+            padding1: 0.0,
             color_low: self.color_low,
             color_high: self.color_high,
         };

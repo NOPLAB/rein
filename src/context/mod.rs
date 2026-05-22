@@ -45,8 +45,8 @@ impl WgpuContext {
                 required_features: wgpu::Features::empty(),
                 required_limits: wgpu::Limits::default(),
                 memory_hints: wgpu::MemoryHints::Performance,
-                trace: Default::default(),
-                experimental_features: Default::default(),
+                trace: wgpu::Trace::default(),
+                experimental_features: wgpu::ExperimentalFeatures::default(),
             })
             .await?;
 

@@ -109,7 +109,7 @@ impl PhysicsWorld {
     pub fn step(&mut self, world: &mut hecs::World, delta_time: f64) {
         self.accumulator += delta_time;
 
-        let mut substeps = 0u32;
+        let mut substeps = 0_u32;
         while self.accumulator >= self.config.fixed_timestep && substeps < self.config.max_substeps
         {
             self.fixed_step(world, self.config.fixed_timestep as f32);
@@ -118,7 +118,7 @@ impl PhysicsWorld {
         }
 
         // Clamp accumulator to avoid spiral of death
-        if self.accumulator > self.config.fixed_timestep * self.config.max_substeps as f64 {
+        if self.accumulator > self.config.fixed_timestep * f64::from(self.config.max_substeps) {
             self.accumulator = 0.0;
         }
     }
@@ -137,7 +137,7 @@ impl PhysicsWorld {
     ) {
         self.accumulator += delta_time;
 
-        let mut substeps = 0u32;
+        let mut substeps = 0_u32;
         while self.accumulator >= self.config.fixed_timestep && substeps < self.config.max_substeps
         {
             self.fixed_step_gpu(world, self.config.fixed_timestep as f32, ctx);
@@ -145,7 +145,7 @@ impl PhysicsWorld {
             substeps += 1;
         }
 
-        if self.accumulator > self.config.fixed_timestep * self.config.max_substeps as f64 {
+        if self.accumulator > self.config.fixed_timestep * f64::from(self.config.max_substeps) {
             self.accumulator = 0.0;
         }
     }
@@ -182,13 +182,12 @@ impl PhysicsWorld {
                     world
                         .get::<&Collider>(*e)
                         .ok()
-                        .map(|c| {
+                        .is_some_and(|c| {
                             matches!(
                                 c.shape,
                                 crate::ecs::components::physics::ColliderShape::Sphere { .. }
                             )
                         })
-                        .unwrap_or(false)
                 });
 
                 if all_spheres {
@@ -235,7 +234,7 @@ impl PhysicsWorld {
         } else {
             let pairs = self.broadphase.find_pairs(world);
             Self::run_cpu_narrowphase(world, &pairs, &mut self.contacts);
-        };
+        }
 
         self.contact_cache.warm_start(&mut self.contacts);
         solver::solve_contacts(&mut self.contacts, world, self.config.solver_iterations);
@@ -333,15 +332,15 @@ impl PhysicsWorld {
                 if let (Ok(ca), Ok(cb), Ok(ta), Ok(tb)) =
                     (collider_a, collider_b, transform_a, transform_b)
                 {
-                    let adjusted_a = if ca.offset != Vec3::ZERO {
-                        GlobalTransform(ta.0 * glam::Mat4::from_translation(ca.offset))
-                    } else {
+                    let adjusted_a = if ca.offset == Vec3::ZERO {
                         *ta
-                    };
-                    let adjusted_b = if cb.offset != Vec3::ZERO {
-                        GlobalTransform(tb.0 * glam::Mat4::from_translation(cb.offset))
                     } else {
+                        GlobalTransform(ta.0 * glam::Mat4::from_translation(ca.offset))
+                    };
+                    let adjusted_b = if cb.offset == Vec3::ZERO {
                         *tb
+                    } else {
+                        GlobalTransform(tb.0 * glam::Mat4::from_translation(cb.offset))
                     };
 
                     detect_collision(&ca.shape, &adjusted_a, &cb.shape, &adjusted_b)
@@ -472,8 +471,7 @@ mod tests {
         let speed = rb.linear_velocity.length();
         assert!(
             speed < 5.0,
-            "Box should have mostly settled: speed = {}",
-            speed
+            "Box should have mostly settled: speed = {speed}"
         );
     }
 

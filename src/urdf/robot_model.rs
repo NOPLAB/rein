@@ -245,7 +245,7 @@ impl RobotModel {
         });
 
         let mut indices = Vec::with_capacity(36);
-        for face in 0..6u32 {
+        for face in 0..6_u32 {
             let base = face * 4;
             indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
         }
@@ -261,7 +261,7 @@ impl RobotModel {
     pub fn update_joints(&mut self, left_angles: &[f32], right_angles: &[f32]) {
         self.link_transforms.clear();
         self.link_transforms
-            .insert("base_link".to_string(), Mat4::IDENTITY);
+            .insert("base_link".to_owned(), Mat4::IDENTITY);
 
         // Build transform tree
         for joint in &self.joints {
@@ -379,7 +379,7 @@ impl RobotModel {
 
             let renderer = MeshRenderer {
                 mesh: MeshHandle(Arc::new(link.mesh)),
-                material: MaterialHandle(material_arc.clone()),
+                material: MaterialHandle(Arc::clone(&material_arc)),
                 visible: true,
                 cast_shadow: true,
                 receive_shadow: true,

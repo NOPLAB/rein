@@ -10,7 +10,7 @@ use crate::core::vertex::VertexPC;
 /// FXAA uniform parameters.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct FxaaUniform {
+pub(super) struct FxaaUniform {
     /// Texture size (width, height, 1/width, 1/height).
     pub texture_size: [f32; 4],
 }
@@ -75,7 +75,7 @@ impl FxaaEffect {
 
         let uniform_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<FxaaUniform>() as u64,
+            size_of::<FxaaUniform>() as u64,
             Some("fxaa uniform"),
         );
 

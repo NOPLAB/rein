@@ -90,7 +90,7 @@ impl Aabb {
     }
 
     /// Merge two AABBs.
-    pub fn merge(&self, other: &Aabb) -> Self {
+    pub fn merge(&self, other: &Self) -> Self {
         Self {
             min: self.min.min(other.min),
             max: self.max.max(other.max),

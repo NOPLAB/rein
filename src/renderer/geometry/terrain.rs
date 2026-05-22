@@ -23,9 +23,9 @@ impl TerrainLod {
     /// Get the step size multiplier for this LOD level.
     fn step_multiplier(self) -> u32 {
         match self {
-            TerrainLod::High => 1,
-            TerrainLod::Medium => 2,
-            TerrainLod::Low => 4,
+            Self::High => 1,
+            Self::Medium => 2,
+            Self::Low => 4,
         }
     }
 }

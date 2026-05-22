@@ -19,7 +19,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rein = { git = "https://github.com/MechanicalGirlDev/rein" }
+rein = { git = "https://github.com/NOPLAB/rein" }
 ```
 
 ### Feature Flags

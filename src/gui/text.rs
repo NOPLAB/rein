@@ -19,7 +19,7 @@ struct TextEntry {
 pub struct TextRenderer {
     font_system: FontSystem,
     swash_cache: SwashCache,
-    #[allow(dead_code)]
+    #[expect(dead_code, reason = "glyphon Cache kept alive for the atlas; not accessed directly")]
     cache: Cache,
     atlas: TextAtlas,
     renderer: GlyphonTextRenderer,
@@ -128,8 +128,8 @@ impl TextRenderer {
         self.scratch_buffer
             .shape_until_scroll(&mut self.font_system, false);
 
-        let mut width = 0.0f32;
-        let mut height = 0.0f32;
+        let mut width = 0.0_f32;
+        let mut height = 0.0_f32;
 
         for run in self.scratch_buffer.layout_runs() {
             width = width.max(run.line_w);
@@ -144,7 +144,6 @@ impl TextRenderer {
     }
 
     /// Render the text to a render pass.
-    #[allow(clippy::too_many_arguments)]
     pub fn render(
         &mut self,
         ctx: &WgpuContext,

@@ -30,7 +30,7 @@ struct SkyboxVertex {
 impl SkyboxVertex {
     const fn layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<SkyboxVertex>() as wgpu::BufferAddress,
+            array_stride: size_of::<Self>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[wgpu::VertexAttribute {
                 offset: 0,
@@ -107,7 +107,7 @@ impl Skybox {
         // Uniform buffer
         let uniform_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<SkyboxUniform>() as u64,
+            size_of::<SkyboxUniform>() as u64,
             Some("skybox uniform"),
         );
 

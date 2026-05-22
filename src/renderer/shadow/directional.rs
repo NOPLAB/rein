@@ -62,7 +62,7 @@ impl DirectionalShadow {
 
         let uniform_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<DepthPassUniform>() as u64,
+            size_of::<DepthPassUniform>() as u64,
             Some("shadow depth uniform"),
         );
 

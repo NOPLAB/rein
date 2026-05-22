@@ -42,7 +42,7 @@ pub struct FrameInput<'a> {
     pub surface_format: wgpu::TextureFormat,
 }
 
-impl<'a> FrameInput<'a> {
+impl FrameInput<'_> {
     /// Get the viewport width.
     pub fn width(&self) -> u32 {
         self.viewport.width

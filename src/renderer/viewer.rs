@@ -57,13 +57,13 @@ impl Projection {
     /// Get the projection matrix.
     pub fn matrix(&self) -> Mat4 {
         match *self {
-            Projection::Perspective {
+            Self::Perspective {
                 fov,
                 aspect,
                 near,
                 far,
             } => Mat4::perspective_rh(fov, aspect, near, far),
-            Projection::Orthographic {
+            Self::Orthographic {
                 width,
                 height,
                 near,
@@ -81,7 +81,7 @@ impl Projection {
 
     /// Update the aspect ratio.
     pub fn set_aspect(&mut self, aspect: f32) {
-        if let Projection::Perspective { aspect: a, .. } = self {
+        if let Self::Perspective { aspect: a, .. } = self {
             *a = aspect;
         }
     }

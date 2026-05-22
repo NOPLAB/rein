@@ -76,7 +76,7 @@ impl UVMaterial {
         // Create camera uniform buffer
         let camera_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<CameraUniform>() as u64,
+            size_of::<CameraUniform>() as u64,
             Some("uv camera uniform"),
         );
 
@@ -92,7 +92,7 @@ impl UVMaterial {
         // Create model uniform buffer
         let model_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<ModelUniform>() as u64,
+            size_of::<ModelUniform>() as u64,
             Some("uv model uniform"),
         );
 

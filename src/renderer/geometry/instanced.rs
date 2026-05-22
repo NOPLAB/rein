@@ -110,17 +110,17 @@ impl Geometry for InstancedMesh {
 }
 
 /// Builder for creating instanced meshes from positions.
-#[allow(dead_code)]
-pub struct InstancedMeshBuilder {
+#[allow(dead_code, reason = "scaffolding for upcoming instancing API; kept compiled to prevent bitrot")]
+pub(super) struct InstancedMeshBuilder {
     positions: Vec<Vec3>,
     colors: Vec<[f32; 4]>,
     transforms: Vec<Mat4>,
 }
 
-#[allow(dead_code)]
+#[allow(dead_code, reason = "scaffolding for upcoming instancing API; kept compiled to prevent bitrot")]
 impl InstancedMeshBuilder {
     /// Create a new builder.
-    pub fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self {
             positions: Vec::new(),
             colors: Vec::new(),
@@ -129,7 +129,7 @@ impl InstancedMeshBuilder {
     }
 
     /// Add an instance at a position with white color.
-    pub fn add_position(mut self, position: Vec3) -> Self {
+    pub(super) fn add_position(mut self, position: Vec3) -> Self {
         self.positions.push(position);
         self.colors.push([1.0, 1.0, 1.0, 1.0]);
         self.transforms.push(Mat4::from_translation(position));
@@ -137,7 +137,7 @@ impl InstancedMeshBuilder {
     }
 
     /// Add an instance at a position with a specific color.
-    pub fn add_position_with_color(mut self, position: Vec3, color: [f32; 4]) -> Self {
+    pub(super) fn add_position_with_color(mut self, position: Vec3, color: [f32; 4]) -> Self {
         self.positions.push(position);
         self.colors.push(color);
         self.transforms.push(Mat4::from_translation(position));
@@ -145,7 +145,7 @@ impl InstancedMeshBuilder {
     }
 
     /// Add an instance with a full transform.
-    pub fn add_transform(mut self, transform: Mat4, color: [f32; 4]) -> Self {
+    pub(super) fn add_transform(mut self, transform: Mat4, color: [f32; 4]) -> Self {
         self.transforms.push(transform);
         self.colors.push(color);
         self.positions.push(transform.transform_point3(Vec3::ZERO));
@@ -153,7 +153,7 @@ impl InstancedMeshBuilder {
     }
 
     /// Build the instance data.
-    pub fn build(self) -> Vec<InstanceData> {
+    pub(super) fn build(self) -> Vec<InstanceData> {
         self.transforms
             .into_iter()
             .zip(self.colors)

@@ -8,6 +8,7 @@ use crate::ecs::components::transform::GlobalTransform;
 use crate::renderer::light::{Light, LightType, LightUniforms};
 use crate::renderer::viewer::Camera;
 use glam::Vec3;
+use std::sync::Arc;
 
 /// A lightweight light wrapper for ECS LightComponent data.
 ///
@@ -46,7 +47,7 @@ impl Light for EcsLight {
 ///
 /// Returns `None` if no active camera exists.
 fn find_active_camera(world: &hecs::World) -> Option<Camera> {
-    for (_, (cam, _global)) in world.query::<(&CameraComponent, &GlobalTransform)>().iter() {
+    for (_, (cam, _global)) in &mut world.query::<(&CameraComponent, &GlobalTransform)>() {
         if cam.active {
             return Some(cam.camera.clone());
         }
@@ -57,7 +58,7 @@ fn find_active_camera(world: &hecs::World) -> Option<Camera> {
 /// Collect all lights from the ECS World.
 fn collect_lights(world: &hecs::World) -> Vec<EcsLight> {
     let mut lights = Vec::new();
-    for (_, (light, global)) in world.query::<(&LightComponent, &GlobalTransform)>().iter() {
+    for (_, (light, global)) in &mut world.query::<(&LightComponent, &GlobalTransform)>() {
         let position_or_direction = match light.light_type {
             LightType::Directional => {
                 // Extract the forward direction (-Z axis) from the transform matrix.
@@ -81,8 +82,8 @@ fn collect_lights(world: &hecs::World) -> Vec<EcsLight> {
 
 /// Pre-collected draw command with owned Arc handles.
 struct DrawCommand {
-    material: std::sync::Arc<dyn crate::ecs::bridge::MaterialResource>,
-    mesh: std::sync::Arc<dyn crate::renderer::geometry::Geometry + Send + Sync>,
+    material: Arc<dyn crate::ecs::bridge::MaterialResource>,
+    mesh: Arc<dyn crate::renderer::geometry::Geometry + Send + Sync>,
     global_transform: glam::Mat4,
 }
 
@@ -102,14 +103,13 @@ pub fn render_system(
     render_pass: &mut wgpu::RenderPass<'_>,
 ) {
     // 1. Find active camera.
-    let camera = match find_active_camera(world) {
-        Some(cam) => cam,
-        None => return,
+    let Some(camera) = find_active_camera(world) else {
+        return;
     };
 
     // 2. Collect lights.
     let ecs_lights = collect_lights(world);
-    let light_refs: Vec<&dyn Light> = ecs_lights.iter().map(|l| l as &dyn Light).collect();
+    let light_refs: Vec<&dyn Light> = ecs_lights.iter().map(|l| -> &dyn Light { l }).collect();
 
     // 3. Collect drawable entities with Arc clones.
     let mut draw_commands: Vec<DrawCommand> = Vec::new();
@@ -117,13 +117,13 @@ pub fn render_system(
         let mut query = world
             .query::<(&MeshRenderer, &GlobalTransform)>()
             .with::<&Visible>();
-        for (_, (renderer, global)) in query.iter() {
+        for (_, (renderer, global)) in &mut query {
             if !renderer.visible {
                 continue;
             }
             draw_commands.push(DrawCommand {
-                material: renderer.material.0.clone(),
-                mesh: renderer.mesh.0.clone(),
+                material: Arc::clone(&renderer.material.0),
+                mesh: Arc::clone(&renderer.mesh.0),
                 global_transform: global.0,
             });
         }

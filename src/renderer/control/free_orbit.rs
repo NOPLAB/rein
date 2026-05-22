@@ -45,7 +45,7 @@ impl FreeOrbitControl {
             zoom_speed: 0.1,
             pan_speed: 0.002,
             orientation: Quat::IDENTITY,
-            distance: (min_distance + max_distance) / 2.0,
+            distance: f32::midpoint(min_distance, max_distance),
             left_mouse_pressed: false,
             right_mouse_pressed: false,
             middle_mouse_pressed: false,

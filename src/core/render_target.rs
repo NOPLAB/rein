@@ -48,7 +48,7 @@ impl<'a> RenderTarget<'a> {
         Self {
             ctx,
             color_view: surface_view,
-            depth_view: depth_texture.map(|d| d.view()),
+            depth_view: depth_texture.map(DepthTexture::view),
             width,
             height,
             format,

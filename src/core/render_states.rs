@@ -54,10 +54,10 @@ impl ClearState {
     pub fn color_load_op(&self) -> wgpu::LoadOp<wgpu::Color> {
         match self.color {
             Some([r, g, b, a]) => wgpu::LoadOp::Clear(wgpu::Color {
-                r: r as f64,
-                g: g as f64,
-                b: b as f64,
-                a: a as f64,
+                r: f64::from(r),
+                g: f64::from(g),
+                b: f64::from(b),
+                a: f64::from(a),
             }),
             None => wgpu::LoadOp::Load,
         }
@@ -104,9 +104,9 @@ impl BlendState {
     /// Convert to wgpu blend state.
     pub fn to_wgpu(&self) -> Option<wgpu::BlendState> {
         match self {
-            BlendState::Opaque => None,
-            BlendState::Alpha => Some(wgpu::BlendState::ALPHA_BLENDING),
-            BlendState::Additive => Some(wgpu::BlendState {
+            Self::Opaque => None,
+            Self::Alpha => Some(wgpu::BlendState::ALPHA_BLENDING),
+            Self::Additive => Some(wgpu::BlendState {
                 color: wgpu::BlendComponent {
                     src_factor: wgpu::BlendFactor::One,
                     dst_factor: wgpu::BlendFactor::One,
@@ -118,7 +118,7 @@ impl BlendState {
                     operation: wgpu::BlendOperation::Add,
                 },
             }),
-            BlendState::PremultipliedAlpha => Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+            Self::PremultipliedAlpha => Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
         }
     }
 }
@@ -196,9 +196,9 @@ impl CullState {
     /// Convert to wgpu cull mode.
     pub fn to_wgpu(&self) -> Option<wgpu::Face> {
         match self {
-            CullState::None => None,
-            CullState::Front => Some(wgpu::Face::Front),
-            CullState::Back => Some(wgpu::Face::Back),
+            Self::None => None,
+            Self::Front => Some(wgpu::Face::Front),
+            Self::Back => Some(wgpu::Face::Back),
         }
     }
 }

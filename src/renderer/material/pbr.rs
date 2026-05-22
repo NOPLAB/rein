@@ -12,7 +12,7 @@ use glam::Mat4;
 /// PBR material uniform data.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct PbrUniform {
+pub(super) struct PbrUniform {
     /// Base color (albedo) RGBA.
     pub base_color: [f32; 4],
     /// Emissive color RGB + padding.
@@ -155,7 +155,7 @@ impl PbrMaterial {
         // Create camera uniform buffer
         let camera_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<CameraUniform>() as u64,
+            size_of::<CameraUniform>() as u64,
             Some("pbr camera uniform"),
         );
 
@@ -171,7 +171,7 @@ impl PbrMaterial {
         // Create model uniform buffer
         let model_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<ModelUniform>() as u64,
+            size_of::<ModelUniform>() as u64,
             Some("pbr model uniform"),
         );
 
@@ -187,7 +187,7 @@ impl PbrMaterial {
         // Create PBR parameters buffer
         let pbr_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<PbrUniform>() as u64,
+            size_of::<PbrUniform>() as u64,
             Some("pbr params uniform"),
         );
 

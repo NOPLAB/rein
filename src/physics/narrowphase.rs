@@ -563,11 +563,11 @@ fn sat_test_axis(
     half_b: &[f32; 3],
     t: Vec3,
 ) -> Option<f32> {
-    let mut proj_a = 0.0f32;
+    let mut proj_a = 0.0_f32;
     for i in 0..3 {
         proj_a += half_a[i] * axes_a[i].dot(axis).abs();
     }
-    let mut proj_b = 0.0f32;
+    let mut proj_b = 0.0_f32;
     for i in 0..3 {
         proj_b += half_b[i] * axes_b[i].dot(axis).abs();
     }
@@ -575,11 +575,7 @@ fn sat_test_axis(
     let dist = t.dot(axis).abs();
     let overlap = proj_a + proj_b - dist;
 
-    if overlap > 0.0 {
-        Some(overlap)
-    } else {
-        None
-    }
+    (overlap > 0.0).then_some(overlap)
 }
 
 /// Specialized box-sphere intersection test.

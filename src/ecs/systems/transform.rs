@@ -152,9 +152,7 @@ mod tests {
         let eps = 1e-5;
         assert!(
             (actual_pos - expected).length() < eps,
-            "Expected {:?}, got {:?}",
-            expected,
-            actual_pos
+            "Expected {expected:?}, got {actual_pos:?}"
         );
     }
 }

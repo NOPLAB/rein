@@ -11,7 +11,7 @@ use glam::Mat4;
 /// Light view-projection uniform for shadow mapping.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct LightMatrixUniform {
+pub(super) struct LightMatrixUniform {
     pub light_view_proj: [[f32; 4]; 4],
 }
 
@@ -77,7 +77,7 @@ impl DepthMaterial {
         // Create light matrix buffer
         let light_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<LightMatrixUniform>() as u64,
+            size_of::<LightMatrixUniform>() as u64,
             Some("depth light uniform"),
         );
 
@@ -93,7 +93,7 @@ impl DepthMaterial {
         // Create model buffer
         let model_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<ModelUniform>() as u64,
+            size_of::<ModelUniform>() as u64,
             Some("depth model uniform"),
         );
 

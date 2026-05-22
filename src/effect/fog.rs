@@ -22,7 +22,7 @@ pub enum FogMode {
 /// Fog uniform parameters.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct FogUniform {
+pub(super) struct FogUniform {
     /// Fog color RGB + mode (0=linear, 1=exp, 2=exp2).
     pub color_mode: [f32; 4],
     /// start, end, density, padding
@@ -122,7 +122,7 @@ impl FogEffect {
 
         let uniform_buffer = RawUniformBuffer::new(
             ctx,
-            std::mem::size_of::<FogUniform>() as u64,
+            size_of::<FogUniform>() as u64,
             Some("fog uniform"),
         );
 

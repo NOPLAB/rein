@@ -15,7 +15,7 @@ pub struct PhysicsAabb {
 impl PhysicsAabb {
     /// Test whether two AABBs overlap.
     #[inline]
-    pub fn overlaps(&self, other: &PhysicsAabb) -> bool {
+    pub fn overlaps(&self, other: &Self) -> bool {
         self.min.x <= other.max.x
             && self.max.x >= other.min.x
             && self.min.y <= other.max.y
@@ -35,14 +35,14 @@ impl ColliderShape {
         let local_dir = inv.transform_vector3(direction).normalize_or_zero();
 
         let local_point = match self {
-            ColliderShape::Sphere { radius } => {
+            Self::Sphere { radius } => {
                 if local_dir == Vec3::ZERO {
                     Vec3::ZERO
                 } else {
                     local_dir * *radius
                 }
             }
-            ColliderShape::Box { half_extents } => Vec3::new(
+            Self::Box { half_extents } => Vec3::new(
                 if local_dir.x >= 0.0 {
                     half_extents.x
                 } else {
@@ -59,7 +59,7 @@ impl ColliderShape {
                     -half_extents.z
                 },
             ),
-            ColliderShape::Capsule {
+            Self::Capsule {
                 radius,
                 half_height,
             } => {
@@ -75,7 +75,7 @@ impl ColliderShape {
                     base + local_dir * *radius
                 }
             }
-            ColliderShape::Cylinder {
+            Self::Cylinder {
                 radius,
                 half_height,
             } => {
@@ -94,7 +94,7 @@ impl ColliderShape {
                 };
                 Vec3::new(xz_point.x, y, xz_point.z)
             }
-            ColliderShape::ConvexHull { points } => {
+            Self::ConvexHull { points } => {
                 if points.is_empty() {
                     Vec3::ZERO
                 } else {
@@ -122,7 +122,7 @@ impl ColliderShape {
         let mat = transform.0;
 
         match self {
-            ColliderShape::Sphere { radius } => {
+            Self::Sphere { radius } => {
                 let center = mat.transform_point3(Vec3::ZERO);
                 // Extract scale to account for non-uniform scaling
                 let scale_x = mat.x_axis.truncate().length();
@@ -135,8 +135,8 @@ impl ColliderShape {
                     max: center + Vec3::splat(world_radius),
                 }
             }
-            ColliderShape::Box { half_extents } => aabb_from_extents(*half_extents, mat),
-            ColliderShape::Capsule {
+            Self::Box { half_extents } => aabb_from_extents(*half_extents, mat),
+            Self::Capsule {
                 radius,
                 half_height,
             } => {
@@ -144,14 +144,14 @@ impl ColliderShape {
                 let extents = Vec3::new(*radius, *half_height + *radius, *radius);
                 aabb_from_extents(extents, mat)
             }
-            ColliderShape::Cylinder {
+            Self::Cylinder {
                 radius,
                 half_height,
             } => {
                 let extents = Vec3::new(*radius, *half_height, *radius);
                 aabb_from_extents(extents, mat)
             }
-            ColliderShape::ConvexHull { points } => {
+            Self::ConvexHull { points } => {
                 if points.is_empty() {
                     let center = mat.transform_point3(Vec3::ZERO);
                     return PhysicsAabb {

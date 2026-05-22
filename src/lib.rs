@@ -17,6 +17,19 @@
 //! 9. **gui** - Text rendering with glyphon (feature = "gui")
 //! 10. **urdf** - URDF robot model loading
 
+// Test code may freely panic, print, and compare floats exactly — these patterns
+// would be warnings in production code but are idiomatic in `#[test]` functions.
+#![cfg_attr(
+    test,
+    allow(
+        clippy::unwrap_used,
+        clippy::float_cmp,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        reason = "lints intentionally disabled inside tests",
+    )
+)]
+
 pub mod context;
 pub mod core;
 pub mod effect;
