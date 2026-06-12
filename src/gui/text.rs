@@ -19,7 +19,10 @@ struct TextEntry {
 pub struct TextRenderer {
     font_system: FontSystem,
     swash_cache: SwashCache,
-    #[expect(dead_code, reason = "glyphon Cache kept alive for the atlas; not accessed directly")]
+    #[expect(
+        dead_code,
+        reason = "glyphon Cache kept alive for the atlas; not accessed directly"
+    )]
     cache: Cache,
     atlas: TextAtlas,
     renderer: GlyphonTextRenderer,

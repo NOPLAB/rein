@@ -120,11 +120,8 @@ impl FogEffect {
             .cull(CullState::None)
             .build()?;
 
-        let uniform_buffer = RawUniformBuffer::new(
-            ctx,
-            size_of::<FogUniform>() as u64,
-            Some("fog uniform"),
-        );
+        let uniform_buffer =
+            RawUniformBuffer::new(ctx, size_of::<FogUniform>() as u64, Some("fog uniform"));
 
         let sampler = ctx.device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("fog color sampler"),

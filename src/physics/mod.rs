@@ -179,15 +179,12 @@ impl PhysicsWorld {
                 // GPU narrowphase handles sphere-sphere, sphere-box, box-sphere but NOT box-box.
                 // Fast path avoids broadphase readback by using pair_buffer directly.
                 let all_spheres = entity_map.iter().all(|e| {
-                    world
-                        .get::<&Collider>(*e)
-                        .ok()
-                        .is_some_and(|c| {
-                            matches!(
-                                c.shape,
-                                crate::ecs::components::physics::ColliderShape::Sphere { .. }
-                            )
-                        })
+                    world.get::<&Collider>(*e).ok().is_some_and(|c| {
+                        matches!(
+                            c.shape,
+                            crate::ecs::components::physics::ColliderShape::Sphere { .. }
+                        )
+                    })
                 });
 
                 if all_spheres {

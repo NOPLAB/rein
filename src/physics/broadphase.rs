@@ -53,8 +53,8 @@ impl SpatialHashGrid {
         let mut entries: Vec<(hecs::Entity, PhysicsAabb, RigidBodyType)> = Vec::new();
         let mut max_extent: f32 = 0.0;
 
-        for (entity, (collider, transform, rb)) in &mut world
-            .query::<(&Collider, &GlobalTransform, &RigidBody)>()
+        for (entity, (collider, transform, rb)) in
+            &mut world.query::<(&Collider, &GlobalTransform, &RigidBody)>()
         {
             if collider.is_sensor {
                 continue;

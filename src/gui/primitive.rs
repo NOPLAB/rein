@@ -222,7 +222,10 @@ impl PrimitiveRenderer {
         let new_size = [width as f32, height as f32];
         // Sizes originate from integer pixel counts, so exact comparison is intentional
         // and never sees NaN; we only want to skip the upload when nothing changed.
-        #[allow(clippy::float_cmp, reason = "screen size derived from integer pixel counts")]
+        #[allow(
+            clippy::float_cmp,
+            reason = "screen size derived from integer pixel counts"
+        )]
         let size_changed = self.screen_size != new_size;
         if size_changed {
             self.screen_size = new_size;

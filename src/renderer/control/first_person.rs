@@ -90,11 +90,9 @@ impl FirstPersonControl {
                         event.set_handled();
                     }
                 }
-                Event::MouseMotion { delta, .. } => {
-                    if self.mouse_captured {
-                        self.handle_mouse_motion(delta.0, delta.1);
-                        event.set_handled();
-                    }
+                Event::MouseMotion { delta, .. } if self.mouse_captured => {
+                    self.handle_mouse_motion(delta.0, delta.1);
+                    event.set_handled();
                 }
                 _ => {}
             }

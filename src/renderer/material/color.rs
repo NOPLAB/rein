@@ -86,11 +86,8 @@ impl ColorMaterial {
         });
 
         // Create model uniform buffer
-        let model_buffer = RawUniformBuffer::new(
-            ctx,
-            size_of::<ModelUniform>() as u64,
-            Some("model uniform"),
-        );
+        let model_buffer =
+            RawUniformBuffer::new(ctx, size_of::<ModelUniform>() as u64, Some("model uniform"));
 
         let model_bind_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("model bind group"),

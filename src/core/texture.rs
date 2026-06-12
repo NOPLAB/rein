@@ -117,7 +117,10 @@ impl Texture2D {
 
 /// A depth texture for depth testing.
 pub struct DepthTexture {
-    #[expect(dead_code, reason = "GPU resource kept alive to back the view; not read directly")]
+    #[expect(
+        dead_code,
+        reason = "GPU resource kept alive to back the view; not read directly"
+    )]
     pub(crate) texture: wgpu::Texture,
     pub(crate) view: wgpu::TextureView,
     pub(crate) size: wgpu::Extent3d,

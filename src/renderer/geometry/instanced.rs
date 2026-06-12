@@ -110,14 +110,20 @@ impl Geometry for InstancedMesh {
 }
 
 /// Builder for creating instanced meshes from positions.
-#[allow(dead_code, reason = "scaffolding for upcoming instancing API; kept compiled to prevent bitrot")]
+#[allow(
+    dead_code,
+    reason = "scaffolding for upcoming instancing API; kept compiled to prevent bitrot"
+)]
 pub(super) struct InstancedMeshBuilder {
     positions: Vec<Vec3>,
     colors: Vec<[f32; 4]>,
     transforms: Vec<Mat4>,
 }
 
-#[allow(dead_code, reason = "scaffolding for upcoming instancing API; kept compiled to prevent bitrot")]
+#[allow(
+    dead_code,
+    reason = "scaffolding for upcoming instancing API; kept compiled to prevent bitrot"
+)]
 impl InstancedMeshBuilder {
     /// Create a new builder.
     pub(super) fn new() -> Self {
