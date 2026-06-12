@@ -73,11 +73,8 @@ impl FxaaEffect {
             .cull(CullState::None)
             .build()?;
 
-        let uniform_buffer = RawUniformBuffer::new(
-            ctx,
-            size_of::<FxaaUniform>() as u64,
-            Some("fxaa uniform"),
-        );
+        let uniform_buffer =
+            RawUniformBuffer::new(ctx, size_of::<FxaaUniform>() as u64, Some("fxaa uniform"));
 
         let sampler = ctx.device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("fxaa sampler"),

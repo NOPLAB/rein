@@ -131,8 +131,10 @@ impl<'a> PipelineBuilder<'a> {
                     immediate_size: 0,
                 });
 
-        let depth_stencil = self
-            .depth_state.map_or_else(|| DepthState::default().to_wgpu(DepthTexture::FORMAT), |state| state.to_wgpu(DepthTexture::FORMAT));
+        let depth_stencil = self.depth_state.map_or_else(
+            || DepthState::default().to_wgpu(DepthTexture::FORMAT),
+            |state| state.to_wgpu(DepthTexture::FORMAT),
+        );
 
         let pipeline = self
             .ctx

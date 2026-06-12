@@ -96,7 +96,8 @@ pub fn read_buffer_sync<T: bytemuck::Pod>(
     let slice = staging.slice(..);
     let (tx, rx) = std::sync::mpsc::channel();
     slice.map_async(wgpu::MapMode::Read, move |result| {
-        tx.send(result).expect("readback channel receiver dropped before map_async completed");
+        tx.send(result)
+            .expect("readback channel receiver dropped before map_async completed");
     });
     let _ = ctx.device.poll(wgpu::PollType::wait_indefinitely());
     rx.recv()
@@ -143,7 +144,8 @@ pub async fn read_back_async<T: bytemuck::Pod>(
     let slice = staging.slice(..);
     let (tx, rx) = std::sync::mpsc::channel();
     slice.map_async(wgpu::MapMode::Read, move |result| {
-        tx.send(result).expect("readback channel receiver dropped before map_async completed");
+        tx.send(result)
+            .expect("readback channel receiver dropped before map_async completed");
     });
     let _ = ctx.device.poll(wgpu::PollType::wait_indefinitely());
     rx.recv()

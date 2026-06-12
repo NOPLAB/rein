@@ -400,8 +400,7 @@ impl GpuPhysics {
             .build()?;
 
         let max_narrowphase_pairs = MAX_PAIRS as usize;
-        let narrowphase_pair_size =
-            (max_narrowphase_pairs * size_of::<CollisionPair>()) as u64;
+        let narrowphase_pair_size = (max_narrowphase_pairs * size_of::<CollisionPair>()) as u64;
         let narrowphase_pair_buffer =
             StorageBuffer::new(ctx, narrowphase_pair_size, Some("narrowphase pair buffer"));
 
@@ -450,8 +449,8 @@ impl GpuPhysics {
         let mut entity_map = Vec::new();
         let mut max_extent: f32 = 0.0;
 
-        for (entity, (collider, transform, rb)) in &mut world
-            .query::<(&Collider, &GlobalTransform, &RigidBody)>()
+        for (entity, (collider, transform, rb)) in
+            &mut world.query::<(&Collider, &GlobalTransform, &RigidBody)>()
         {
             if collider.is_sensor {
                 continue;
@@ -513,7 +512,6 @@ impl GpuPhysics {
             cell_size_bits: cell_size.to_bits(),
             _pad0: 0,
         };
-
 
         let params_buffer = ctx
             .device
@@ -743,7 +741,6 @@ impl GpuPhysics {
         if gpu_pair_count > 0 {
             self.narrowphase_pair_buffer.write(ctx, &gpu_pairs);
 
-    
             let params_data = [gpu_pair_count, 0_u32, 0_u32, 0_u32];
             let params_buffer = ctx
                 .device
@@ -802,7 +799,6 @@ impl GpuPhysics {
         if pair_count == 0 {
             return;
         }
-
 
         let params_data = [pair_count, 0_u32, 0_u32, 0_u32];
         let params_buffer = ctx
@@ -884,8 +880,8 @@ impl GpuPhysics {
         let mut bodies = Vec::new();
         let mut entity_map = Vec::new();
 
-        for (entity, (rb, transform)) in &mut world
-            .query::<(&RigidBody, &crate::ecs::components::transform::Transform)>()
+        for (entity, (rb, transform)) in
+            &mut world.query::<(&RigidBody, &crate::ecs::components::transform::Transform)>()
         {
             let body_type = match rb.body_type {
                 RigidBodyType::Dynamic => 0_u32,
@@ -980,7 +976,6 @@ impl GpuPhysics {
         body_count: u32,
         params: &IntegrateParams,
     ) {
-
         let params_buffer = ctx
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
