@@ -16,6 +16,15 @@ pub struct Vertex {
     pub mode: u32,
 }
 
+/// A contiguous run of vertices sharing one scissor (clip) rectangle.
+#[derive(Clone, Copy)]
+struct DrawBatch {
+    /// First vertex index covered by this batch.
+    start: u32,
+    /// Clip rectangle `[x, y, w, h]` in physical pixels, or `None` for no clip.
+    scissor: Option<[u32; 4]>,
+}
+
 /// Renderer for 2D primitives.
 pub struct PrimitiveRenderer {
     pipeline: wgpu::RenderPipeline,
@@ -24,6 +33,9 @@ pub struct PrimitiveRenderer {
     screen_buffer: wgpu::Buffer,
     bind_group: wgpu::BindGroup,
     screen_size: [f32; 2],
+    // Scissor batching: each batch records where it starts and which clip applies.
+    batches: Vec<DrawBatch>,
+    clip_stack: Vec<[u32; 4]>,
 }
 
 impl PrimitiveRenderer {
@@ -152,6 +164,8 @@ impl PrimitiveRenderer {
             screen_buffer,
             bind_group,
             screen_size: [0.0, 0.0],
+            batches: Vec::new(),
+            clip_stack: Vec::new(),
         }
     }
 
@@ -174,6 +188,99 @@ impl PrimitiveRenderer {
         );
     }
 
+    /// Add a straight line segment of the given thickness to the draw list.
+    pub fn draw_line(
+        &mut self,
+        x0: f32,
+        y0: f32,
+        x1: f32,
+        y1: f32,
+        thickness: f32,
+        color: [f32; 4],
+    ) {
+        let (dx, dy) = (x1 - x0, y1 - y0);
+        let len = dx.hypot(dy);
+        if len <= f32::EPSILON {
+            return;
+        }
+        // Unit normal scaled to half thickness, used to offset the segment into a quad.
+        let half = thickness * 0.5;
+        let (nx, ny) = (-dy / len * half, dx / len * half);
+        self.push_quad_raw(
+            [x0 + nx, y0 + ny],
+            [x1 + nx, y1 + ny],
+            [x1 - nx, y1 - ny],
+            [x0 - nx, y0 - ny],
+            color,
+        );
+    }
+
+    /// Add a connected polyline (no miter joins — corners may show a small gap).
+    pub fn draw_polyline(&mut self, points: &[[f32; 2]], thickness: f32, color: [f32; 4]) {
+        for pair in points.windows(2) {
+            self.draw_line(
+                pair[0][0], pair[0][1], pair[1][0], pair[1][1], thickness, color,
+            );
+        }
+    }
+
+    /// Push a clip rectangle. Drawing is scissored to the intersection of this
+    /// rectangle with any clip already on the stack. Balance every call with
+    /// [`pop_clip`](Self::pop_clip).
+    pub fn push_clip(&mut self, x: f32, y: f32, w: f32, h: f32) {
+        let mut x0 = x.max(0.0);
+        let mut y0 = y.max(0.0);
+        let mut x1 = (x + w).max(x0);
+        let mut y1 = (y + h).max(y0);
+        if let Some(&[px, py, pw, ph]) = self.clip_stack.last() {
+            x0 = x0.max(px as f32);
+            y0 = y0.max(py as f32);
+            x1 = x1.min((px + pw) as f32);
+            y1 = y1.min((py + ph) as f32);
+        }
+        self.clip_stack.push([
+            x0 as u32,
+            y0 as u32,
+            (x1 - x0).max(0.0) as u32,
+            (y1 - y0).max(0.0) as u32,
+        ]);
+    }
+
+    /// Pop the most recently pushed clip rectangle.
+    pub fn pop_clip(&mut self) {
+        self.clip_stack.pop();
+    }
+
+    /// Start a new batch if the active clip differs from the open batch's clip.
+    fn begin_geometry(&mut self) {
+        let scissor = self.clip_stack.last().copied();
+        let start = self.vertices.len() as u32;
+        match self.batches.last() {
+            Some(b) if b.scissor == scissor => {}
+            _ => self.batches.push(DrawBatch { start, scissor }),
+        }
+    }
+
+    /// Push an arbitrary (possibly rotated) quad from four corners, mode 0 (solid).
+    fn push_quad_raw(
+        &mut self,
+        p0: [f32; 2],
+        p1: [f32; 2],
+        p2: [f32; 2],
+        p3: [f32; 2],
+        color: [f32; 4],
+    ) {
+        self.begin_geometry();
+        let v = |position: [f32; 2]| Vertex {
+            position,
+            uv: [0.0, 0.0],
+            color,
+            mode: 0,
+        };
+        self.vertices
+            .extend_from_slice(&[v(p0), v(p1), v(p2), v(p0), v(p2), v(p3)]);
+    }
+
     fn push_quad(
         &mut self,
         x: f32,
@@ -185,6 +292,7 @@ impl PrimitiveRenderer {
         color: [f32; 4],
         mode: u32,
     ) {
+        self.begin_geometry();
         let v0 = Vertex {
             position: [x, y],
             uv: [uv_min[0], uv_min[1]],
@@ -248,12 +356,14 @@ impl PrimitiveRenderer {
             .write_buffer(&self.vertex_buffer, 0, bytemuck::cast_slice(&self.vertices));
     }
 
-    /// Clear the draw list.
+    /// Clear the draw list (vertices, batches and any unbalanced clips).
     pub fn finish(&mut self) {
         self.vertices.clear();
+        self.batches.clear();
+        self.clip_stack.clear();
     }
 
-    /// Render the primitives.
+    /// Render the primitives, applying each batch's scissor rectangle.
     pub fn render<'a>(&'a self, pass: &mut wgpu::RenderPass<'a>) {
         if self.vertices.is_empty() {
             return;
@@ -266,6 +376,32 @@ impl PrimitiveRenderer {
             self.vertex_buffer
                 .slice(0..((self.vertices.len() * size_of::<Vertex>()) as u64)),
         );
-        pass.draw(0..self.vertices.len() as u32, 0..1);
+
+        let total = self.vertices.len() as u32;
+        let sw = self.screen_size[0] as u32;
+        let sh = self.screen_size[1] as u32;
+
+        for (i, batch) in self.batches.iter().enumerate() {
+            let end = self.batches.get(i + 1).map_or(total, |next| next.start);
+            if end <= batch.start {
+                continue;
+            }
+            match batch.scissor {
+                Some([x, y, w, h]) => {
+                    // Clamp to the surface; wgpu rejects scissors past the edge or with
+                    // zero area, so fully-offscreen / empty clips skip the draw entirely.
+                    let x = x.min(sw);
+                    let y = y.min(sh);
+                    let w = w.min(sw.saturating_sub(x));
+                    let h = h.min(sh.saturating_sub(y));
+                    if w == 0 || h == 0 {
+                        continue;
+                    }
+                    pass.set_scissor_rect(x, y, w, h);
+                }
+                None => pass.set_scissor_rect(0, 0, sw, sh),
+            }
+            pass.draw(batch.start..end, 0..1);
+        }
     }
 }

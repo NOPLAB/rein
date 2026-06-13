@@ -257,21 +257,30 @@ where
             WindowEvent::KeyboardInput {
                 event: key_event, ..
             } => {
+                let pressed = matches!(key_event.state, winit::event::ElementState::Pressed);
                 if let Some(key) = Key::from_winit(&key_event.logical_key) {
-                    match key_event.state {
-                        winit::event::ElementState::Pressed => {
-                            self.events.push(Event::KeyPress {
-                                key,
-                                modifiers,
-                                handled: false,
-                            });
-                        }
-                        winit::event::ElementState::Released => {
-                            self.events.push(Event::KeyRelease {
-                                key,
-                                modifiers,
-                                handled: false,
-                            });
+                    if pressed {
+                        self.events.push(Event::KeyPress {
+                            key,
+                            modifiers,
+                            handled: false,
+                        });
+                    } else {
+                        self.events.push(Event::KeyRelease {
+                            key,
+                            modifiers,
+                            handled: false,
+                        });
+                    }
+                }
+
+                // Emit composed text (shift/layout-correct) for text fields. Filter
+                // control characters so Backspace/Enter stay on the `KeyPress` path.
+                if pressed {
+                    if let Some(text) = key_event.text.as_ref() {
+                        let text: String = text.chars().filter(|c| !c.is_control()).collect();
+                        if !text.is_empty() {
+                            self.events.push(Event::Text { text });
                         }
                     }
                 }

@@ -52,6 +52,7 @@ jobs:
       - run: cargo check --features engine
       - run: cargo check --features physics
       - run: cargo check --features full
+      - run: cargo check --no-default-features --features gui
 
   examples:
     name: Check examples

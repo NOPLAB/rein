@@ -1,0 +1,10 @@
+[package]
+name = "gui_demo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# `window` arrives via rein's default features; `gui` adds the UI/text stack.
+rein = { path = "../..", features = ["gui"] }
+glam = "0.31"
+anyhow = "1"
