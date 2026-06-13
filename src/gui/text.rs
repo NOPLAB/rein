@@ -13,6 +13,8 @@ struct TextEntry {
     left: f32,
     top: f32,
     color: Color,
+    /// Clip bounds `[left, top, right, bottom]` in pixels, or `None` for unclipped.
+    clip: Option<[i32; 4]>,
 }
 
 /// Text renderer using glyphon.
@@ -31,6 +33,7 @@ pub struct TextRenderer {
     entries: Vec<TextEntry>,
     available_buffers: Vec<Buffer>,
     scratch_buffer: Buffer,
+    clip_stack: Vec<[i32; 4]>,
 
     viewport: glyphon::Viewport,
 }
@@ -63,6 +66,7 @@ impl TextRenderer {
             entries: Vec::new(),
             available_buffers: Vec::new(),
             scratch_buffer,
+            clip_stack: Vec::new(),
             viewport,
         }
     }
@@ -78,6 +82,35 @@ impl TextRenderer {
         while let Some(entry) = self.entries.pop() {
             self.available_buffers.push(entry.buffer);
         }
+        self.clip_stack.clear();
+    }
+
+    /// Push a clip rectangle; subsequent text is bounded to the intersection of
+    /// this rectangle with any clip already on the stack. Balance with [`pop_clip`].
+    ///
+    /// [`pop_clip`]: Self::pop_clip
+    pub fn push_clip(&mut self, x: f32, y: f32, w: f32, h: f32) {
+        let mut left = x;
+        let mut top = y;
+        let mut right = x + w;
+        let mut bottom = y + h;
+        if let Some(&[pl, pt, pr, pb]) = self.clip_stack.last() {
+            left = left.max(pl as f32);
+            top = top.max(pt as f32);
+            right = right.min(pr as f32);
+            bottom = bottom.min(pb as f32);
+        }
+        // Keep the rect non-inverted so glyphon never sees right < left.
+        let left = left.max(0.0) as i32;
+        let top = top.max(0.0) as i32;
+        let right = right.max(left as f32) as i32;
+        let bottom = bottom.max(top as f32) as i32;
+        self.clip_stack.push([left, top, right, bottom]);
+    }
+
+    /// Pop the most recently pushed clip rectangle.
+    pub fn pop_clip(&mut self) {
+        self.clip_stack.pop();
     }
 
     /// Draw text immediately (queues for render).
@@ -112,6 +145,7 @@ impl TextRenderer {
                 (color[2] * 255.0) as u8,
                 (color[3] * 255.0) as u8,
             ),
+            clip: self.clip_stack.last().copied(),
         });
     }
 
@@ -162,17 +196,26 @@ impl TextRenderer {
         let mut text_areas = Vec::with_capacity(self.entries.len());
 
         for entry in &self.entries {
-            text_areas.push(TextArea {
-                buffer: &entry.buffer,
-                left: entry.left,
-                top: entry.top,
-                scale: 1.0,
-                bounds: TextBounds {
+            let bounds = entry.clip.map_or(
+                TextBounds {
                     left: 0,
                     top: 0,
                     right: width as i32,
                     bottom: height as i32,
                 },
+                |[left, top, right, bottom]| TextBounds {
+                    left,
+                    top,
+                    right,
+                    bottom,
+                },
+            );
+            text_areas.push(TextArea {
+                buffer: &entry.buffer,
+                left: entry.left,
+                top: entry.top,
+                scale: 1.0,
+                bounds,
                 default_color: entry.color,
                 custom_glyphs: &[],
             });

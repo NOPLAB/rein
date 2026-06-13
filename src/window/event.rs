@@ -247,6 +247,11 @@ pub enum Event {
         handled: bool,
     },
 
+    /// Text input — composed, layout/shift-correct characters produced by a key
+    /// press. Use this (not `KeyPress`) to drive text fields; control characters
+    /// such as Backspace and Enter are filtered out and arrive as `KeyPress`.
+    Text { text: String },
+
     /// Window resized.
     Resize { width: u32, height: u32 },
 }
@@ -261,7 +266,7 @@ impl Event {
             | Self::MouseWheel { handled, .. }
             | Self::KeyPress { handled, .. }
             | Self::KeyRelease { handled, .. } => *handled,
-            Self::Resize { .. } => false,
+            Self::Text { .. } | Self::Resize { .. } => false,
         }
     }
 
@@ -274,7 +279,7 @@ impl Event {
             | Self::MouseWheel { handled, .. }
             | Self::KeyPress { handled, .. }
             | Self::KeyRelease { handled, .. } => *handled = true,
-            Self::Resize { .. } => {}
+            Self::Text { .. } | Self::Resize { .. } => {}
         }
     }
 }
