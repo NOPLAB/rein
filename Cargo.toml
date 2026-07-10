@@ -43,7 +43,7 @@ hecs = { version = "0.10", optional = true }
 tracing = "0.1"
 anyhow = "1"
 thiserror = "2"
-pollster = "0.4"
+pollster = "1.0"
 
 [lints.rust]
 unsafe_op_in_unsafe_fn = "warn"
