@@ -21,7 +21,7 @@ full = ["engine", "physics", "gpu-physics", "gui"]
 
 [dependencies]
 # GPU
-wgpu = "28"
+wgpu = "30"
 bytemuck = { version = "1.25", features = ["derive"] }
 
 # Window (optional)
