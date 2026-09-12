@@ -39,10 +39,10 @@ impl Ui<'_> {
         }
         // Clamp against last frame's content height *before* laying out, so a caller that
         // pins the offset to the end (auto-scroll) sees the end this frame, not a blank.
+        // Without a previous measurement the offset is 0: a huge offset would push the
+        // content so far that float precision collapses its measured height to zero.
         let prev_content_h = self.gui().scalar(id.with("content_h"));
-        if prev_content_h > 0.0 {
-            scroll = scroll.clamp(0.0, (prev_content_h - area.height()).max(0.0));
-        }
+        scroll = scroll.clamp(0.0, (prev_content_h - area.height()).max(0.0));
 
         let (result, content_h) = {
             let inner = Rect::new(area.min.x, area.min.y - scroll, content_w, f32::MAX / 4.0);
