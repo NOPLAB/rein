@@ -473,6 +473,12 @@ pub trait DockPanels {
         true
     }
 
+    /// Whether the panel body is left unpainted (a 3D viewport rendered underneath the
+    /// GUI shows through).
+    fn transparent(&self, _panel: &str) -> bool {
+        false
+    }
+
     /// Draw the body of `panel`.
     fn show(&mut self, panel: &str, ui: &mut Ui<'_>);
 }
@@ -528,8 +534,9 @@ impl Ui<'_> {
             };
             let names = names.clone();
             let active_i = (*active).min(names.len().saturating_sub(1));
-            // Strip.
+            // Strip (clipped: an overflowing tab row must not spill into the neighbour).
             self.gui().paint_rect(pl.strip, style.palette.panel_alt);
+            self.gui().push_clip(pl.strip);
             let strip_id = root_id.with(("strip", pl.id));
             let mut x = pl.strip.min.x + 2.0;
             let mut new_active = active_i;
@@ -578,6 +585,7 @@ impl Ui<'_> {
                 }
                 x += w + 1.0;
             }
+            self.gui().pop_clip();
             if let Some(DockNode::Tabs { active, .. }) =
                 tree.root.as_mut().and_then(|r| r.find_tabs_mut(pl.id))
             {
@@ -606,7 +614,9 @@ impl Ui<'_> {
             }
             // Body.
             let body = Rect::from_min_max(Vec2::new(pl.rect.min.x, pl.strip.max.y), pl.rect.max);
-            self.gui().paint_rect(body, style.palette.panel);
+            if !names.get(new_active).is_some_and(|n| panels.transparent(n)) {
+                self.gui().paint_rect(body, style.palette.panel);
+            }
             if let Some(name) = names.get(new_active) {
                 let inner = body.shrink(style.padding);
                 let mut c = self.child(root_id.with(("body", name.as_str())), inner, Dir::Vertical);

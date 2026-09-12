@@ -37,6 +37,12 @@ impl Ui<'_> {
         if area_r.hovered {
             scroll -= self.gui().scroll_delta().y;
         }
+        // Clamp against last frame's content height *before* laying out, so a caller that
+        // pins the offset to the end (auto-scroll) sees the end this frame, not a blank.
+        let prev_content_h = self.gui().scalar(id.with("content_h"));
+        if prev_content_h > 0.0 {
+            scroll = scroll.clamp(0.0, (prev_content_h - area.height()).max(0.0));
+        }
 
         let (result, content_h) = {
             let inner = Rect::new(area.min.x, area.min.y - scroll, content_w, f32::MAX / 4.0);
@@ -48,6 +54,7 @@ impl Ui<'_> {
             (r, c.used_size().y)
         };
         let max_scroll = (content_h - area.height()).max(0.0);
+        self.gui().set_scalar(id.with("content_h"), content_h);
         // The thumb.
         if max_scroll > 0.0 {
             let track = Rect::new(area.max.x - bar_w, area.min.y, bar_w, area.height());
