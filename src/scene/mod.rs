@@ -33,7 +33,7 @@ pub use camera::OrbitCamera;
 pub use mesh::{MeshAsset, MeshData, MeshHandle, ObjError};
 pub use offscreen::OffscreenTarget;
 pub use pick::Ray;
-pub use renderer::SceneRenderer;
+pub use renderer::{RenderOptions, SceneRenderer};
 pub use scene::{
     GridParams, Hit, Label, Layer, Lighting, LineSet, Object, ObjectId, PointInstance, PointSet,
     Scene, ScreenLabel, Surface,

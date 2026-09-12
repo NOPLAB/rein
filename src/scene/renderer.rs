@@ -143,6 +143,27 @@ fn bind_uniform(
     })
 }
 
+/// How one [`SceneRenderer::render_with`] call uses the target.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RenderOptions {
+    /// Clear colour and depth to the scene background first. `false` draws over whatever
+    /// is already in the target (a second scene composited on top).
+    pub clear: bool,
+    /// Restrict drawing to a pixel rectangle `[x, y, width, height]` of the target. The
+    /// depth buffer inside the rectangle is reset, so the region behaves like a small
+    /// independent viewport (an axis gizmo in a corner, a picture-in-picture view).
+    pub region: Option<[u32; 4]>,
+}
+
+impl Default for RenderOptions {
+    fn default() -> Self {
+        Self {
+            clear: true,
+            region: None,
+        }
+    }
+}
+
 /// A prepared draw of one object.
 struct ObjectDraw<'a> {
     object: &'a Object,
@@ -172,6 +193,8 @@ pub struct SceneRenderer {
     point: wgpu::RenderPipeline,
     point_overlay: wgpu::RenderPipeline,
     grid: wgpu::RenderPipeline,
+    /// Writes far depth over the current viewport without touching colour.
+    depth_reset: wgpu::RenderPipeline,
 }
 
 impl SceneRenderer {
@@ -289,6 +312,19 @@ impl SceneRenderer {
             .cull(CullState::None)
             .build()?;
 
+        let depth_reset = PipelineBuilder::new(ctx)
+            .label("scene depth reset")
+            .shader(include_str!("../shaders/scene_depth_reset.wgsl"))
+            .color_format(format)
+            .depth(DepthState {
+                write: true,
+                compare: wgpu::CompareFunction::Always,
+            })
+            // Colour writes are neutralised by the blend state: destination stays as is.
+            .blend(BlendState::KeepDestination)
+            .cull(CullState::None)
+            .build()?;
+
         Ok(Self {
             format,
             frame_buffer,
@@ -309,6 +345,7 @@ impl SceneRenderer {
             point,
             point_overlay,
             grid,
+            depth_reset,
         })
     }
 
@@ -326,7 +363,24 @@ impl SceneRenderer {
         viewer: &dyn Viewer,
         scene: &Scene,
     ) -> Vec<ScreenLabel> {
-        let (width, height) = (target.width() as f32, target.height() as f32);
+        self.render_with(ctx, target, viewer, scene, RenderOptions::default())
+    }
+
+    /// [`Self::render`] with explicit clear / region options. Label positions are in
+    /// target pixels (the region offset is already applied).
+    pub fn render_with(
+        &mut self,
+        ctx: &WgpuContext,
+        target: &RenderTarget<'_>,
+        viewer: &dyn Viewer,
+        scene: &Scene,
+        options: RenderOptions,
+    ) -> Vec<ScreenLabel> {
+        let region = options
+            .region
+            .unwrap_or_else(|| [0, 0, target.width(), target.height()]);
+        let (ox, oy) = (region[0] as f32, region[1] as f32);
+        let (width, height) = (region[2].max(1) as f32, region[3].max(1) as f32);
         let view = viewer.view_matrix();
         let proj = viewer.projection_matrix();
         let view_proj = proj * view;
@@ -479,8 +533,20 @@ impl SceneRenderer {
 
         let mut encoder = ctx.create_encoder(Some("scene"));
         {
-            let clear = ClearState::color_and_depth(scene.background, 1.0);
+            let clear = if options.clear {
+                ClearState::color_and_depth(scene.background, 1.0)
+            } else {
+                ClearState::none()
+            };
             let mut pass = target.begin_render_pass(&mut encoder, clear);
+            if let Some([x, y, w, h]) = options.region {
+                let w = w.min(target.width().saturating_sub(x)).max(1);
+                let h = h.min(target.height().saturating_sub(y)).max(1);
+                pass.set_viewport(x as f32, y as f32, w as f32, h as f32, 0.0, 1.0);
+                pass.set_scissor_rect(x, y, w, h);
+                pass.set_pipeline(&self.depth_reset);
+                pass.draw(0..3, 0..1);
+            }
             pass.set_bind_group(0, &self.frame_bind_group, &[]);
 
             if scene.grid.is_some() {
@@ -582,8 +648,8 @@ impl SceneRenderer {
                     l.pixel_size
                 };
                 Some(ScreenLabel {
-                    x: (ndc.x + 1.0) * 0.5 * width,
-                    y: (1.0 - ndc.y) * 0.5 * height,
+                    x: ox + (ndc.x + 1.0) * 0.5 * width,
+                    y: oy + (1.0 - ndc.y) * 0.5 * height,
                     size,
                     text: l.text.clone(),
                     color: l.color,
