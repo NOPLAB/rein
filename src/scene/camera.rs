@@ -38,9 +38,11 @@ pub struct OrbitCamera {
     pub viewport_size: Vec2,
     /// Viewport origin in pixels (`x`, `y`) for sub-rect rendering.
     pub viewport_origin: Vec2,
+    #[cfg(feature = "window")]
     dragging: Option<Drag>,
 }
 
+#[cfg(feature = "window")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Drag {
     Orbit,
@@ -63,6 +65,7 @@ impl OrbitCamera {
             max_distance: 1000.0,
             viewport_size: Vec2::new(1.0, 1.0),
             viewport_origin: Vec2::ZERO,
+            #[cfg(feature = "window")]
             dragging: None,
         }
     }
@@ -271,6 +274,7 @@ impl OrbitCamera {
     }
 
     /// Whether a drag is in progress.
+    #[cfg(feature = "window")]
     pub fn is_dragging(&self) -> bool {
         self.dragging.is_some()
     }

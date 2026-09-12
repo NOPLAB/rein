@@ -307,7 +307,11 @@ impl SceneRenderer {
             .bind_group_layout(&frame_layout)
             .bind_group_layout(&grid_layout)
             .color_format(format)
-            .depth(DepthState::read_only())
+            .depth(DepthState {
+                write: false,
+                compare: wgpu::CompareFunction::LessEqual,
+            })
+            .depth_bias(-2, -1.0)
             .blend(BlendState::Alpha)
             .cull(CullState::None)
             .build()?;
@@ -549,12 +553,6 @@ impl SceneRenderer {
             }
             pass.set_bind_group(0, &self.frame_bind_group, &[]);
 
-            if scene.grid.is_some() {
-                pass.set_pipeline(&self.grid);
-                pass.set_bind_group(1, &self.grid_bind_group, &[]);
-                pass.draw(0..6, 0..1);
-            }
-
             let draw_objects = |pass: &mut wgpu::RenderPass<'_>, list: &[&ObjectDraw<'_>]| {
                 for d in list {
                     pass.set_bind_group(1, &self.object_bind_group, &[d.offset]);
@@ -568,6 +566,14 @@ impl SceneRenderer {
 
             pass.set_pipeline(&self.mesh_opaque);
             draw_objects(&mut pass, &ground);
+
+            // The grid goes over opaque geometry: its pipeline compares `LessEqual` with a
+            // depth bias, so a ground plate lying exactly on the grid plane does not hide it.
+            if scene.grid.is_some() {
+                pass.set_pipeline(&self.grid);
+                pass.set_bind_group(1, &self.grid_bind_group, &[]);
+                pass.draw(0..6, 0..1);
+            }
 
             let stride_line = size_of::<VertexPC>() as u64;
             let stride_point = size_of::<PointInstance>() as u64;

@@ -7,13 +7,51 @@
 //! built on the window event types, so it additionally requires the `window` feature.
 
 pub mod primitive;
+pub mod style;
 pub mod text;
 
 #[cfg(feature = "window")]
 pub mod ui;
 
+#[cfg(feature = "window")]
+mod builder;
+#[cfg(feature = "window")]
+mod containers;
+#[cfg(feature = "window")]
+mod dock;
+#[cfg(feature = "window")]
+mod frame;
+#[cfg(feature = "window")]
+mod menu;
+#[cfg(feature = "window")]
+mod plot;
+#[cfg(feature = "window")]
+mod types;
+#[cfg(feature = "window")]
+mod widgets;
+
+#[cfg(all(test, feature = "window"))]
+mod tests;
+
 pub use primitive::PrimitiveRenderer;
+pub use style::{Color, Palette, Style};
 pub use text::{TextBuilder, TextRenderer};
 
 #[cfg(feature = "window")]
+pub use builder::Ui;
+#[cfg(feature = "window")]
+pub use containers::{modal, paint_chevron, TreeResponse};
+#[cfg(feature = "window")]
+pub use dock::{DockNode, DockPanels, DockResponse, DockTree, DropTarget, Side};
+#[cfg(feature = "window")]
+pub use frame::{Gui, LAYERS, LAYER_BASE, LAYER_POPUP};
+#[cfg(feature = "window")]
+pub use menu::Menu;
+#[cfg(feature = "window")]
+pub use plot::{Plot, Series};
+#[cfg(feature = "window")]
+pub use types::{Align, Dir, Id, Rect, Response, Sense};
+#[cfg(feature = "window")]
 pub use ui::UiContext;
+#[cfg(feature = "window")]
+pub use widgets::{ButtonKind, Range, TextResponse};
