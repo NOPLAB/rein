@@ -34,6 +34,7 @@ pub mod context;
 pub mod core;
 pub mod effect;
 pub mod renderer;
+pub mod scene;
 pub mod urdf;
 
 #[cfg(feature = "window")]
