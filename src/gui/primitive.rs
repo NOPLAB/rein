@@ -174,6 +174,45 @@ impl PrimitiveRenderer {
         self.push_quad(x, y, w, h, [0.0, 0.0], [1.0, 1.0], color, 0);
     }
 
+    /// Reserve a rectangle whose geometry is filled in later with
+    /// [`Self::set_reserved_rect`] — a panel background drawn *behind* content whose
+    /// size is only known after the content is laid out.
+    pub fn reserve_rect(&mut self) -> usize {
+        let index = self.vertices.len();
+        self.push_quad(0.0, 0.0, 0.0, 0.0, [0.0, 0.0], [1.0, 1.0], [0.0; 4], 0);
+        index
+    }
+
+    /// Fill in a rectangle reserved with [`Self::reserve_rect`].
+    pub fn set_reserved_rect(
+        &mut self,
+        index: usize,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        color: [f32; 4],
+    ) {
+        // Same emission order as `push_quad`: v0 v1 v2 v0 v2 v3.
+        let corners = [
+            [x, y],
+            [x, y + h],
+            [x + w, y + h],
+            [x, y],
+            [x + w, y + h],
+            [x + w, y],
+        ];
+        for (v, c) in self.vertices.iter_mut().skip(index).take(6).zip(corners) {
+            v.position = c;
+            v.color = color;
+        }
+    }
+
+    /// Number of vertices queued so far this frame.
+    pub fn vertex_count(&self) -> usize {
+        self.vertices.len()
+    }
+
     /// Add a circle to the draw list.
     pub fn draw_circle(&mut self, x: f32, y: f32, radius: f32, color: [f32; 4]) {
         self.push_quad(

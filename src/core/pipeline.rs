@@ -20,6 +20,7 @@ pub struct PipelineBuilder<'a> {
     blend_state: BlendState,
     cull_state: CullState,
     topology: wgpu::PrimitiveTopology,
+    depth_bias: wgpu::DepthBiasState,
 }
 
 impl<'a> PipelineBuilder<'a> {
@@ -38,7 +39,18 @@ impl<'a> PipelineBuilder<'a> {
             blend_state: BlendState::Opaque,
             cull_state: CullState::Back,
             topology: wgpu::PrimitiveTopology::TriangleList,
+            depth_bias: wgpu::DepthBiasState::default(),
         }
+    }
+
+    /// Constant and slope-scaled depth bias (negative values pull towards the viewer).
+    pub fn depth_bias(mut self, constant: i32, slope_scale: f32) -> Self {
+        self.depth_bias = wgpu::DepthBiasState {
+            constant,
+            slope_scale,
+            clamp: 0.0,
+        };
+        self
     }
 
     /// Set the pipeline label.
@@ -199,9 +211,10 @@ impl<'a> PipelineBuilder<'a> {
                     immediate_size: 0,
                 });
 
-        let depth_stencil = self
-            .depth_state
-            .map(|state| state.to_wgpu(DepthTexture::FORMAT));
+        let depth_stencil = self.depth_state.map(|state| wgpu::DepthStencilState {
+            bias: self.depth_bias,
+            ..state.to_wgpu(DepthTexture::FORMAT)
+        });
 
         let pipeline = self
             .ctx

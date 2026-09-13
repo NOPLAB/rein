@@ -3,9 +3,11 @@
 //! Provides text rendering using glyphon.
 
 use crate::context::WgpuContext;
+use std::collections::HashMap;
+
 use glyphon::{
-    Attrs, Buffer, Cache, Color, Family, FontSystem, Metrics, Resolution, Shaping, SwashCache,
-    TextArea, TextAtlas, TextBounds, TextRenderer as GlyphonTextRenderer,
+    Attrs, Buffer, Cache, Color, FontSystem, Metrics, Resolution, Shaping, SwashCache, TextArea,
+    TextAtlas, TextBounds, TextRenderer as GlyphonTextRenderer,
 };
 
 struct TextEntry {
@@ -15,6 +17,8 @@ struct TextEntry {
     color: Color,
     /// Clip bounds `[left, top, right, bottom]` in pixels, or `None` for unclipped.
     clip: Option<[i32; 4]>,
+    /// Draw layer (see `TextRenderer::set_layer`).
+    layer: u8,
 }
 
 /// Text renderer using glyphon.
@@ -36,6 +40,13 @@ pub struct TextRenderer {
     clip_stack: Vec<[i32; 4]>,
 
     viewport: glyphon::Viewport,
+
+    /// Font family for every draw / measure call.
+    family: glyphon::FamilyOwned,
+    /// Layer new entries are tagged with (see [`Self::set_layer`]).
+    layer: u8,
+    /// `(text, size bits)` → `(width, height)`; shaping is the cost, and labels repeat.
+    measure_cache: HashMap<(String, u32), (f32, f32)>,
 }
 
 impl TextRenderer {
@@ -68,7 +79,35 @@ impl TextRenderer {
             scratch_buffer,
             clip_stack: Vec::new(),
             viewport,
+            family: glyphon::FamilyOwned::Monospace,
+            layer: 0,
+            measure_cache: HashMap::new(),
         }
+    }
+
+    /// Use this font family for all subsequent text (`FamilyOwned::SansSerif`,
+    /// `FamilyOwned::Name("Noto Sans JP".into())`, …). Clears the measure cache.
+    pub fn set_family(&mut self, family: glyphon::FamilyOwned) {
+        self.family = family;
+        self.measure_cache.clear();
+    }
+
+    /// Register font data (TTF / OTF bytes) with the font database, so it can be selected
+    /// by name with [`Self::set_family`] and used as a fallback.
+    pub fn load_font_data(&mut self, data: Vec<u8>) {
+        self.font_system.db_mut().load_font_data(data);
+        self.measure_cache.clear();
+    }
+
+    /// Tag subsequent entries with `layer`. [`Self::render_layer`] draws one layer at a
+    /// time so a caller can interleave text with other passes (popups above base UI).
+    pub fn set_layer(&mut self, layer: u8) {
+        self.layer = layer;
+    }
+
+    /// Highest layer index used since [`Self::begin_frame`].
+    pub fn max_layer(&self) -> u8 {
+        self.entries.iter().map(|e| e.layer).max().unwrap_or(0)
     }
 
     /// Update the viewport size.
@@ -83,6 +122,10 @@ impl TextRenderer {
             self.available_buffers.push(entry.buffer);
         }
         self.clip_stack.clear();
+        self.layer = 0;
+        if self.measure_cache.len() > 8192 {
+            self.measure_cache.clear();
+        }
     }
 
     /// Push a clip rectangle; subsequent text is bounded to the intersection of
@@ -129,7 +172,7 @@ impl TextRenderer {
         buffer.set_text(
             &mut self.font_system,
             text,
-            &Attrs::new().family(Family::Monospace),
+            &Attrs::new().family(self.family.as_family()),
             Shaping::Advanced,
             None,
         );
@@ -146,11 +189,22 @@ impl TextRenderer {
                 (color[3] * 255.0) as u8,
             ),
             clip: self.clip_stack.last().copied(),
+            layer: self.layer,
         });
     }
 
     /// Measure text dimensions.
     pub fn measure(&mut self, text: &str, font_size: f32) -> (f32, f32) {
+        let key = (text.to_owned(), font_size.to_bits());
+        if let Some(&m) = self.measure_cache.get(&key) {
+            return m;
+        }
+        let m = self.measure_uncached(text, font_size);
+        let _ = self.measure_cache.insert(key, m);
+        m
+    }
+
+    fn measure_uncached(&mut self, text: &str, font_size: f32) -> (f32, f32) {
         self.scratch_buffer.set_metrics(
             &mut self.font_system,
             Metrics::new(font_size, font_size * 1.2),
@@ -158,7 +212,7 @@ impl TextRenderer {
         self.scratch_buffer.set_text(
             &mut self.font_system,
             text,
-            &Attrs::new().family(Family::Monospace),
+            &Attrs::new().family(self.family.as_family()),
             Shaping::Advanced,
             None,
         );
@@ -180,7 +234,7 @@ impl TextRenderer {
         (width, height)
     }
 
-    /// Render the text to a render pass.
+    /// Render every layer of text (in layer order) on top of `view`.
     pub fn render(
         &mut self,
         ctx: &WgpuContext,
@@ -189,13 +243,29 @@ impl TextRenderer {
         width: u32,
         height: u32,
     ) -> anyhow::Result<()> {
+        for layer in 0..=self.max_layer() {
+            self.render_layer(ctx, encoder, view, width, height, layer)?;
+        }
+        Ok(())
+    }
+
+    /// Render only the entries tagged with `layer`.
+    pub fn render_layer(
+        &mut self,
+        ctx: &WgpuContext,
+        encoder: &mut wgpu::CommandEncoder,
+        view: &wgpu::TextureView,
+        width: u32,
+        height: u32,
+        layer: u8,
+    ) -> anyhow::Result<()> {
         // Update viewport
         self.viewport
             .update(&ctx.queue, Resolution { width, height });
 
         let mut text_areas = Vec::with_capacity(self.entries.len());
 
-        for entry in &self.entries {
+        for entry in self.entries.iter().filter(|e| e.layer == layer) {
             let bounds = entry.clip.map_or(
                 TextBounds {
                     left: 0,

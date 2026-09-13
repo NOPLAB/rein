@@ -98,6 +98,8 @@ pub enum BlendState {
     Additive,
     /// Pre-multiplied alpha blending.
     PremultipliedAlpha,
+    /// Leave the destination colour untouched (depth-only passes on a colour target).
+    KeepDestination,
 }
 
 impl BlendState {
@@ -119,6 +121,18 @@ impl BlendState {
                 },
             }),
             Self::PremultipliedAlpha => Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+            Self::KeepDestination => Some(wgpu::BlendState {
+                color: wgpu::BlendComponent {
+                    src_factor: wgpu::BlendFactor::Zero,
+                    dst_factor: wgpu::BlendFactor::One,
+                    operation: wgpu::BlendOperation::Add,
+                },
+                alpha: wgpu::BlendComponent {
+                    src_factor: wgpu::BlendFactor::Zero,
+                    dst_factor: wgpu::BlendFactor::One,
+                    operation: wgpu::BlendOperation::Add,
+                },
+            }),
         }
     }
 }

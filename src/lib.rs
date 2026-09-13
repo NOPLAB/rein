@@ -34,6 +34,7 @@ pub mod context;
 pub mod core;
 pub mod effect;
 pub mod renderer;
+pub mod scene;
 pub mod urdf;
 
 #[cfg(feature = "window")]
@@ -104,3 +105,6 @@ pub use physics::{PhysicsConfig, PhysicsWorld};
 
 // Re-export glam for convenience
 pub use glam;
+
+// Re-export wgpu so downstream crates name `TextureFormat` etc. without pinning their own copy.
+pub use wgpu;
