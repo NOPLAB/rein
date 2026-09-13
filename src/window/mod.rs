@@ -365,15 +365,24 @@ where
                 for command in output.window {
                     let w = &graphics.window;
                     match command {
-                        WindowCommand::DragMove => {
-                            if let Err(e) = w.drag_window() {
-                                tracing::debug!("drag_window: {e}");
+                        WindowCommand::DragMove | WindowCommand::DragResize(_) => {
+                            let r = match command {
+                                WindowCommand::DragResize(edge) => {
+                                    w.drag_resize_window(edge.to_winit())
+                                }
+                                _ => w.drag_window(),
+                            };
+                            if let Err(e) = r {
+                                tracing::debug!("window drag: {e}");
                             }
-                        }
-                        WindowCommand::DragResize(edge) => {
-                            if let Err(e) = w.drag_resize_window(edge.to_winit()) {
-                                tracing::debug!("drag_resize_window: {e}");
-                            }
+                            // The OS move / size loop eats the button release, so the
+                            // frame callback would otherwise see the button held forever.
+                            self.events.push(Event::MouseRelease {
+                                button: MouseButton::Left,
+                                position: self.mouse_position,
+                                modifiers: self.modifiers,
+                                handled: false,
+                            });
                         }
                         WindowCommand::Minimize => w.set_minimized(true),
                         WindowCommand::ToggleMaximize => w.set_maximized(!w.is_maximized()),

@@ -332,7 +332,9 @@ impl Ui<'_> {
             style.control_height,
         );
         let size = self.resolve_size(natural);
-        let id = self.make_id(text);
+        // Two buttons with the same label in one `Ui` (two "リセット" in a toolbar) must not
+        // share an id: the first would swallow the release meant for the second.
+        let id = self.make_id((text, self.cursor().to_array().map(f32::to_bits)));
         let r = self.allocate_response(size, Sense::CLICK, id);
         let p = &style.palette;
         let enabled = self.enabled();
@@ -457,7 +459,11 @@ impl Ui<'_> {
             style.control_height,
         );
         let size = self.resolve_size(natural);
-        let id = self.make_id(("seg", options.join("|")));
+        let id = self.make_id((
+            "seg",
+            options.join("|"),
+            self.cursor().to_array().map(f32::to_bits),
+        ));
         let outer = self.allocate(size);
         let enabled = self.enabled();
         // Distribute a forced width evenly.
@@ -531,7 +537,7 @@ impl Ui<'_> {
         let gap = if text.is_empty() { 0.0 } else { 4.0 };
         let natural = Vec2::new(box_size + gap + measured.x, style.row_height);
         let size = self.resolve_size(natural);
-        let id = self.make_id(("check", text));
+        let id = self.make_id(("check", text, self.cursor().to_array().map(f32::to_bits)));
         let r = self.allocate_response(size, Sense::CLICK, id);
         let enabled = self.enabled();
         if r.clicked {
@@ -584,7 +590,7 @@ impl Ui<'_> {
         let measured = self.gui().measure(text, style.font_size);
         let natural = Vec2::new(d + 4.0 + measured.x, style.row_height);
         let size = self.resolve_size(natural);
-        let id = self.make_id(("radio", text));
+        let id = self.make_id(("radio", text, self.cursor().to_array().map(f32::to_bits)));
         let r = self.allocate_response(size, Sense::CLICK, id);
         let p = &style.palette;
         let c = Vec2::new(r.rect.min.x + d * 0.5, r.rect.center().y);
@@ -966,7 +972,7 @@ impl Ui<'_> {
             style.row_height,
         );
         let size = self.resolve_size(natural);
-        let id = self.make_id(("item", text));
+        let id = self.make_id(("item", text, self.cursor().to_array().map(f32::to_bits)));
         let r = self.allocate_response(size, Sense::CLICK, id);
         let enabled = self.enabled();
         if r.hovered && enabled {
