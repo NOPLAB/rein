@@ -85,8 +85,8 @@ pub use effect::{CopyEffect, Effect, EffectChain, FogEffect, FogMode, Fullscreen
 
 #[cfg(feature = "window")]
 pub use window::{
-    screen_target, Event, FrameInput, FrameOutput, Key, Modifiers, MouseButton, Viewport, Window,
-    WindowSettings,
+    screen_target, Cursor, Event, FrameInput, FrameOutput, Key, Modifiers, MouseButton, ResizeEdge,
+    Viewport, Window, WindowCommand, WindowSettings,
 };
 
 #[cfg(feature = "gui")]

@@ -6,8 +6,8 @@ pub mod event;
 pub mod frame_io;
 pub mod settings;
 
-pub use event::{Event, Key, Modifiers, MouseButton};
-pub use frame_io::{FrameInput, FrameOutput, Viewport};
+pub use event::{Cursor, Event, Key, Modifiers, MouseButton};
+pub use frame_io::{FrameInput, FrameOutput, ResizeEdge, Viewport, WindowCommand};
 pub use settings::WindowSettings;
 
 use crate::context::WgpuContext;
@@ -50,6 +50,8 @@ impl Window {
             start_time: std::time::Instant::now(),
             last_frame_time: std::time::Instant::now(),
             mouse_position: (0.0, 0.0),
+            modifiers: Modifiers::default(),
+            cursor: Cursor::Default,
         };
 
         event_loop.run_app(&mut app)?;
@@ -74,6 +76,8 @@ struct App<S, F> {
     start_time: std::time::Instant,
     last_frame_time: std::time::Instant,
     mouse_position: (f32, f32),
+    modifiers: Modifiers,
+    cursor: Cursor,
 }
 
 impl<S, F> ApplicationHandler for App<S, F>
@@ -92,7 +96,14 @@ where
                 self.settings.size.0,
                 self.settings.size.1,
             ))
-            .with_resizable(self.settings.resizable);
+            .with_resizable(self.settings.resizable)
+            .with_decorations(self.settings.decorations)
+            .with_maximized(self.settings.maximized)
+            .with_fullscreen(
+                self.settings
+                    .fullscreen
+                    .then_some(winit::window::Fullscreen::Borderless(None)),
+            );
 
         let window = Arc::new(
             event_loop
@@ -180,11 +191,19 @@ where
             return;
         };
 
-        let modifiers = Modifiers::default(); // TODO: Track modifiers
+        let modifiers = self.modifiers;
 
         match event {
             WindowEvent::CloseRequested => {
                 event_loop.exit();
+            }
+            WindowEvent::ModifiersChanged(m) => {
+                let st = m.state();
+                self.modifiers = Modifiers {
+                    shift: st.shift_key(),
+                    ctrl: st.control_key(),
+                    alt: st.alt_key(),
+                };
             }
             WindowEvent::Resized(size) => {
                 if size.width > 0 && size.height > 0 {
@@ -327,6 +346,8 @@ where
                     surface_view: &view,
                     depth_texture: &graphics.depth_texture,
                     surface_format: graphics.config.format,
+                    maximized: graphics.window.is_maximized(),
+                    scale_factor: graphics.window.scale_factor(),
                 };
 
                 let state = self.state.as_mut().expect("State should exist");
@@ -334,6 +355,31 @@ where
                 let output = (callback)(state, frame_input);
 
                 surface_texture.present();
+
+                if let Some(cursor) = output.cursor {
+                    if cursor != self.cursor {
+                        self.cursor = cursor;
+                        graphics.window.set_cursor(cursor.to_winit());
+                    }
+                }
+                for command in output.window {
+                    let w = &graphics.window;
+                    match command {
+                        WindowCommand::DragMove => {
+                            if let Err(e) = w.drag_window() {
+                                tracing::debug!("drag_window: {e}");
+                            }
+                        }
+                        WindowCommand::DragResize(edge) => {
+                            if let Err(e) = w.drag_resize_window(edge.to_winit()) {
+                                tracing::debug!("drag_resize_window: {e}");
+                            }
+                        }
+                        WindowCommand::Minimize => w.set_minimized(true),
+                        WindowCommand::ToggleMaximize => w.set_maximized(!w.is_maximized()),
+                        WindowCommand::Close => event_loop.exit(),
+                    }
+                }
 
                 if output.exit {
                     event_loop.exit();

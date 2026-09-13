@@ -6,9 +6,10 @@
 
 use glam::Vec2;
 
+use crate::window::event::Cursor;
+
 use super::builder::Ui;
 use super::frame::LAYER_POPUP;
-use super::style::over;
 use super::types::{Dir, Id, Rect, Sense};
 
 /// A node of the dock tree.
@@ -503,8 +504,13 @@ struct Placed {
 
 impl Ui<'_> {
     /// Render `tree` over the remaining region.
+    ///
+    /// The region's ground is the hard line colour so the 1 px gaps between groups read
+    /// as rules; each group is a tab strip (window ground) over a panel body. Splitters
+    /// are the 1 px gaps with a wider invisible grab area; they turn accent on hover.
     pub fn dock(&mut self, tree: &mut DockTree, panels: &mut dyn DockPanels) -> DockResponse {
         let style = self.style().clone();
+        let p = style.palette;
         let area = self.available();
         let _ = self.allocate(area.size());
         let root_id = self.make_id("dock");
@@ -512,6 +518,7 @@ impl Ui<'_> {
         let Some(root) = tree.root.clone() else {
             return response;
         };
+        self.gui().paint_rect(area, p.line_hard);
 
         // Pass 1: layout (also handles splitter drags on the tree).
         let mut placed: Vec<Placed> = Vec::new();
@@ -523,6 +530,7 @@ impl Ui<'_> {
         let mut pressed_tab: Option<(String, u32)> = None;
         let mut drop_target: Option<DropTarget> = None;
         let mouse = self.gui().mouse();
+        let tab_font = style.font_size_small;
         for pl in &placed {
             let Some(DockNode::Tabs {
                 panels: names,
@@ -535,44 +543,53 @@ impl Ui<'_> {
             let names = names.clone();
             let active_i = (*active).min(names.len().saturating_sub(1));
             // Strip (clipped: an overflowing tab row must not spill into the neighbour).
-            self.gui().paint_rect(pl.strip, style.palette.panel_alt);
+            self.gui().paint_rect(pl.strip, p.background);
+            self.gui().paint_rect(
+                Rect::new(pl.strip.min.x, pl.strip.max.y - 1.0, pl.strip.width(), 1.0),
+                p.line_hard,
+            );
             self.gui().push_clip(pl.strip);
             let strip_id = root_id.with(("strip", pl.id));
-            let mut x = pl.strip.min.x + 2.0;
+            let mut x = pl.strip.min.x;
             let mut new_active = active_i;
             for (i, name) in names.iter().enumerate() {
                 let title = panels.title(name);
-                let m = self.gui().measure(&title, style.font_size);
-                let w = m.x + style.padding * 2.0 + 4.0;
-                let tab = Rect::new(x, pl.strip.min.y + 2.0, w, pl.strip.height() - 2.0);
+                let m = self.gui().measure(&title, tab_font);
+                let w = (m.x + 20.0).min(160.0);
+                let tab = Rect::new(x, pl.strip.min.y, w, pl.strip.height() - 1.0);
                 let r = self.interact(strip_id.with(name), tab, Sense::DRAG);
                 response.tabs.push((name.clone(), tab));
                 let is_active = i == active_i;
-                let bg = if is_active {
-                    style.palette.panel
+                let (bg, fg) = if is_active {
+                    (p.panel, p.text)
                 } else if r.hovered {
-                    over(style.palette.hover, style.palette.panel_alt)
+                    (p.row_hover, p.text_dim)
                 } else {
-                    style.palette.panel_alt
+                    (p.background, p.text_faint)
                 };
                 self.gui().paint_rect(tab, bg);
                 if is_active {
                     self.gui().paint_rect(
-                        Rect::new(tab.min.x, tab.min.y, tab.width(), 2.0),
-                        style.palette.accent,
+                        Rect::new(tab.min.x, tab.max.y - 2.0, tab.width(), 2.0),
+                        p.accent,
                     );
                 }
-                let fg = if is_active {
-                    style.palette.text
-                } else {
-                    style.palette.text_dim
-                };
+                // Right rule.
+                self.gui().paint_rect(
+                    Rect::new(tab.max.x, tab.min.y, 1.0, tab.height()),
+                    p.line_hard,
+                );
+                self.gui().push_clip(tab.shrink2(Vec2::new(4.0, 0.0)));
                 self.gui().paint_text(
                     &title,
-                    Vec2::new(tab.min.x + style.padding + 2.0, tab.center().y - m.y * 0.5),
-                    style.font_size,
+                    Vec2::new(tab.min.x + 10.0, tab.center().y - m.y * 0.5),
+                    tab_font,
                     fg,
                 );
+                self.gui().pop_clip();
+                if r.hovered {
+                    self.gui().set_cursor(Cursor::Pointer);
+                }
                 if r.pressed {
                     new_active = i;
                     pressed_tab = Some((name.clone(), pl.id));
@@ -599,28 +616,32 @@ impl Ui<'_> {
                     let body = pl.rect;
                     let rel = (mouse - body.min) / body.size().max(Vec2::ONE);
                     let q = 0.25;
-                    if rel.x < q {
-                        DropTarget::Edge(pl.id, Side::Left)
-                    } else if rel.x > 1.0 - q {
-                        DropTarget::Edge(pl.id, Side::Right)
-                    } else if rel.y < q {
-                        DropTarget::Edge(pl.id, Side::Top)
-                    } else if rel.y > 1.0 - q {
-                        DropTarget::Edge(pl.id, Side::Bottom)
-                    } else {
+                    let edges = [
+                        (rel.x, Side::Left),
+                        (1.0 - rel.x, Side::Right),
+                        (rel.y, Side::Top),
+                        (1.0 - rel.y, Side::Bottom),
+                    ];
+                    let (nearest, side) =
+                        edges
+                            .into_iter()
+                            .fold(edges[0], |a, b| if b.0 < a.0 { b } else { a });
+                    if nearest >= q {
                         DropTarget::Tabs(pl.id)
+                    } else {
+                        DropTarget::Edge(pl.id, side)
                     }
                 });
             }
             // Body.
             let body = Rect::from_min_max(Vec2::new(pl.rect.min.x, pl.strip.max.y), pl.rect.max);
             if !names.get(new_active).is_some_and(|n| panels.transparent(n)) {
-                self.gui().paint_rect(body, style.palette.panel);
+                self.gui().paint_rect(body, p.panel);
             }
             if let Some(name) = names.get(new_active) {
-                let inner = body.shrink(style.padding);
+                let inner = body.shrink2(Vec2::new(style.padding, style.padding * 0.5));
                 let mut c = self.child(root_id.with(("body", name.as_str())), inner, Dir::Vertical);
-                c.gui().push_clip(inner);
+                c.gui().push_clip(body);
                 panels.show(name, &mut c);
                 c.gui().pop_clip();
             }
@@ -635,54 +656,55 @@ impl Ui<'_> {
             let moved = self
                 .gui()
                 .vec2(drag_id)
-                .is_some_and(|start| (mouse - start).length() > 6.0);
+                .is_some_and(|start| (mouse - start).length() > 5.0);
             let held = self.gui().mouse_down(crate::MouseButton::Left);
             if held && moved {
-                // Ghost tab + drop highlight.
+                // Drop highlight (accent tint + accent outline over the affected half)
+                // and a ghost tab.
                 let prev = self.gui().layer();
                 self.gui().set_layer(LAYER_POPUP);
                 if let Some(t) = drop_target {
                     let hl = placed
                         .iter()
-                        .find(|p| match t {
-                            DropTarget::Tabs(id) | DropTarget::Edge(id, _) => p.id == id,
+                        .find(|pl| match t {
+                            DropTarget::Tabs(id) | DropTarget::Edge(id, _) => pl.id == id,
                         })
-                        .map(|p| match t {
-                            DropTarget::Tabs(_) => p.rect,
+                        .map(|pl| match t {
+                            DropTarget::Tabs(_) => pl.rect,
                             DropTarget::Edge(_, Side::Left) => {
-                                p.rect.split_left(p.rect.width() * 0.35).0
+                                pl.rect.split_left(pl.rect.width() * 0.5).0
                             }
                             DropTarget::Edge(_, Side::Right) => {
-                                p.rect.split_right(p.rect.width() * 0.35).1
+                                pl.rect.split_right(pl.rect.width() * 0.5).1
                             }
                             DropTarget::Edge(_, Side::Top) => {
-                                p.rect.split_top(p.rect.height() * 0.35).0
+                                pl.rect.split_top(pl.rect.height() * 0.5).0
                             }
                             DropTarget::Edge(_, Side::Bottom) => {
-                                p.rect.split_bottom(p.rect.height() * 0.35).1
+                                pl.rect.split_bottom(pl.rect.height() * 0.5).1
                             }
                         });
                     if let Some(hl) = hl {
-                        self.gui()
-                            .paint_rect(hl, super::style::with_alpha(style.palette.accent, 0.25));
+                        self.gui().paint_rect(hl, p.accent_bg);
+                        self.gui().paint_rect_outline(hl, 1.0, p.accent);
                     }
                 }
                 let title = panels.title(&name);
-                let m = self.gui().measure(&title, style.font_size);
+                let m = self.gui().measure(&title, tab_font);
                 let ghost = Rect::from_min_size(
                     mouse + Vec2::new(8.0, 8.0),
-                    m + Vec2::splat(style.padding * 2.0),
+                    Vec2::new(m.x + 20.0, style.tab_height),
                 );
-                self.gui().paint_rect(ghost, style.palette.popup);
-                self.gui()
-                    .paint_rect_outline(ghost, 1.0, style.palette.accent);
+                self.gui().paint_rect(ghost, p.popup);
+                self.gui().paint_rect_outline(ghost, 1.0, p.accent);
                 self.gui().paint_text(
                     &title,
-                    ghost.min + Vec2::splat(style.padding),
-                    style.font_size,
-                    style.palette.text,
+                    Vec2::new(ghost.min.x + 10.0, ghost.center().y - m.y * 0.5),
+                    tab_font,
+                    p.text,
                 );
                 self.gui().set_layer(prev);
+                self.gui().set_cursor(Cursor::Grabbing);
             } else if !held {
                 if moved {
                     match drop_target {
@@ -726,7 +748,10 @@ impl Ui<'_> {
                 children,
             } => {
                 let n = children.len();
-                let gap = style.splitter;
+                // The visible gap is 1 px (the ground shows through); the grab area is
+                // `style.splitter` wide, centred on it.
+                let gap = 1.0;
+                let grab = ((style.splitter - gap) * 0.5).max(1.0);
                 let total = sizes.iter().sum::<f32>().max(1e-6);
                 let extent = match dir {
                     Dir::Horizontal => rect.width(),
@@ -735,7 +760,7 @@ impl Ui<'_> {
                 let mut offset = 0.0;
                 for (i, child) in children.iter().enumerate() {
                     let share = sizes.get(i).copied().unwrap_or(1.0) / total;
-                    let len = extent * share;
+                    let len = (extent * share).round();
                     let child_rect = match dir {
                         Dir::Horizontal => {
                             Rect::new(rect.min.x + offset, rect.min.y, len, rect.height())
@@ -749,22 +774,35 @@ impl Ui<'_> {
                     let _ = path.pop();
                     offset += len;
                     if i + 1 < n {
-                        let handle = match dir {
-                            Dir::Horizontal => {
-                                Rect::new(rect.min.x + offset, rect.min.y, gap, rect.height())
-                            }
-                            Dir::Vertical => {
-                                Rect::new(rect.min.x, rect.min.y + offset, rect.width(), gap)
-                            }
+                        let (handle, hit) = match dir {
+                            Dir::Horizontal => (
+                                Rect::new(rect.min.x + offset, rect.min.y, gap, rect.height()),
+                                Rect::new(
+                                    rect.min.x + offset - grab,
+                                    rect.min.y,
+                                    gap + grab * 2.0,
+                                    rect.height(),
+                                ),
+                            ),
+                            Dir::Vertical => (
+                                Rect::new(rect.min.x, rect.min.y + offset, rect.width(), gap),
+                                Rect::new(
+                                    rect.min.x,
+                                    rect.min.y + offset - grab,
+                                    rect.width(),
+                                    gap + grab * 2.0,
+                                ),
+                            ),
                         };
                         let hid = root_id.with(("splitter", path.clone(), i));
-                        let r = self.interact(hid, handle.expand(2.0), Sense::DRAG);
-                        let c = if r.dragged || r.hovered {
-                            style.palette.accent
-                        } else {
-                            style.palette.background
-                        };
-                        self.gui().paint_rect(handle, c);
+                        let r = self.interact(hid, hit, Sense::DRAG);
+                        if r.dragged || r.hovered {
+                            self.gui().paint_rect(handle, style.palette.accent);
+                            self.gui().set_cursor(match dir {
+                                Dir::Horizontal => Cursor::EwResize,
+                                Dir::Vertical => Cursor::NsResize,
+                            });
+                        }
                         if r.dragged && extent > 0.0 {
                             let d = match dir {
                                 Dir::Horizontal => r.drag_delta.x,

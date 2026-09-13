@@ -30,6 +30,9 @@ pub struct OrbitCamera {
     pub ortho: bool,
     /// Zoom factor per wheel notch (`> 1`).
     pub zoom_step: f32,
+    /// Orbit speed: full turns per viewport height of drag (`1.0` = one turn, the
+    /// three.js `OrbitControls` default).
+    pub rotate_speed: f32,
     /// Minimum eye distance.
     pub min_distance: f32,
     /// Maximum eye distance.
@@ -47,6 +50,7 @@ pub struct OrbitCamera {
 enum Drag {
     Orbit,
     Pan,
+    Dolly,
 }
 
 impl OrbitCamera {
@@ -61,6 +65,7 @@ impl OrbitCamera {
             far: 500.0,
             ortho: false,
             zoom_step: 1.1,
+            rotate_speed: 1.0,
             min_distance: 0.05,
             max_distance: 1000.0,
             viewport_size: Vec2::new(1.0, 1.0),
@@ -215,8 +220,10 @@ impl OrbitCamera {
         self.viewport_size.y / height
     }
 
-    /// Consume mouse events: left drag orbits, right / middle drag pans, wheel zooms.
-    /// Events already marked handled are skipped; consumed ones are marked handled.
+    /// Consume mouse events: left drag orbits, right drag pans, middle drag dollies,
+    /// wheel zooms (the three.js `OrbitControls` mapping — the scene follows the pointer:
+    /// dragging down brings the top of the model into view). Events already marked
+    /// handled are skipped; consumed ones are marked handled.
     #[cfg(feature = "window")]
     pub fn handle_events(&mut self, events: &mut [Event]) {
         for event in events.iter_mut() {
@@ -232,7 +239,8 @@ impl OrbitCamera {
                     }
                     self.dragging = Some(match button {
                         MouseButton::Left => Drag::Orbit,
-                        MouseButton::Right | MouseButton::Middle => Drag::Pan,
+                        MouseButton::Right => Drag::Pan,
+                        MouseButton::Middle => Drag::Dolly,
                     });
                     event.set_handled();
                 }
@@ -243,11 +251,19 @@ impl OrbitCamera {
                 }
                 Event::MouseMotion { delta, .. } => match self.dragging {
                     Some(Drag::Orbit) => {
-                        self.orbit(-delta.0 * 0.005, -delta.1 * 0.005);
+                        let per_px = core::f32::consts::TAU * self.rotate_speed
+                            / self.viewport_size.y.max(1.0);
+                        self.orbit(-delta.0 * per_px, delta.1 * per_px);
                         event.set_handled();
                     }
                     Some(Drag::Pan) => {
                         self.pan(Vec2::new(delta.0, delta.1));
+                        event.set_handled();
+                    }
+                    Some(Drag::Dolly) => {
+                        // 100 px of drag = one wheel notch (three.js `dollyDelta * 0.01`);
+                        // dragging down moves away.
+                        self.zoom(-delta.1 * 0.01);
                         event.set_handled();
                     }
                     None => {}
@@ -334,6 +350,38 @@ mod tests {
         assert!(c.direction().dot(Vec3::Z) > 0.99);
         let m = c.view_matrix();
         assert!(m.is_finite());
+    }
+
+    /// Dragging down raises the eye (the scene follows the pointer, as in three.js
+    /// `OrbitControls`); dragging right moves the eye clockwise seen from above.
+    #[cfg(feature = "window")]
+    #[test]
+    fn drag_follows_the_pointer() {
+        use crate::window::event::{Event, Modifiers, MouseButton};
+        let mut c = cam();
+        c.set_viewport(0.0, 0.0, 800.0, 600.0);
+        c.eye = Vec3::new(5.0, 0.0, 0.0);
+        c.target = Vec3::ZERO;
+        let before = c.eye;
+        let mut events = vec![
+            Event::MousePress {
+                button: MouseButton::Left,
+                position: (400.0, 300.0),
+                modifiers: Modifiers::default(),
+                handled: false,
+            },
+            Event::MouseMotion {
+                delta: (30.0, 30.0),
+                position: (430.0, 330.0),
+                modifiers: Modifiers::default(),
+                handled: false,
+            },
+        ];
+        c.handle_events(&mut events);
+        assert!(c.eye.dot(c.up) > before.dot(c.up), "drag down → eye rises");
+        // Clockwise from above about +up: +x rotates toward -y.
+        assert!(c.eye.y < 0.0, "drag right → clockwise: {:?}", c.eye);
+        assert!(events.iter().all(Event::is_handled));
     }
 
     #[test]

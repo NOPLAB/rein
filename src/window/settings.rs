@@ -17,6 +17,9 @@ pub struct WindowSettings {
     pub maximized: bool,
     /// Whether to start in fullscreen.
     pub fullscreen: bool,
+    /// Whether the OS draws the title bar and borders. `false` for a client-side title
+    /// bar: drive moves / resizes / buttons through `FrameOutput::window`.
+    pub decorations: bool,
 }
 
 impl Default for WindowSettings {
@@ -28,6 +31,7 @@ impl Default for WindowSettings {
             vsync: true,
             maximized: false,
             fullscreen: false,
+            decorations: true,
         }
     }
 }
@@ -71,6 +75,12 @@ impl WindowSettings {
     /// Set whether to start in fullscreen.
     pub fn fullscreen(mut self, fullscreen: bool) -> Self {
         self.fullscreen = fullscreen;
+        self
+    }
+
+    /// Set whether the OS draws the window frame.
+    pub fn decorations(mut self, decorations: bool) -> Self {
+        self.decorations = decorations;
         self
     }
 }

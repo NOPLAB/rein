@@ -2,10 +2,16 @@
 
 use glam::Vec2;
 
+use crate::window::event::Cursor;
+
 use super::builder::Ui;
 use super::frame::LAYER_POPUP;
 use super::types::{Dir, Id, Rect, Sense};
-use super::widgets::ButtonKind;
+
+/// Minimum drop-down width.
+const POPUP_MIN_WIDTH: f32 = 190.0;
+/// Drop-down inner padding.
+const POPUP_PAD: f32 = 2.0;
 
 /// One open drop-down.
 #[derive(Debug)]
@@ -23,19 +29,8 @@ impl Menu<'_, '_> {
 
     /// A menu item with a right-aligned hint (a shortcut key).
     pub fn item_shortcut(&mut self, text: &str, hint: &str) -> bool {
-        let style = self.ui.style().clone();
         self.ui.set_next_width(self.width);
-        let r = self.ui.button_kind(text, ButtonKind::Flat);
-        if !hint.is_empty() {
-            let m = self.ui.gui().measure(hint, style.font_size_small);
-            let pos = Vec2::new(
-                r.rect.max.x - style.padding - m.x,
-                r.rect.center().y - m.y * 0.5,
-            );
-            self.ui
-                .gui()
-                .paint_text(hint, pos, style.font_size_small, style.palette.text_dim);
-        }
+        let r = self.ui.menu_row(text, false, hint);
         if r.clicked {
             self.ui.gui().close_popups();
             return true;
@@ -43,24 +38,25 @@ impl Menu<'_, '_> {
         false
     }
 
-    /// A checkable item; `checked` is toggled on click. Returns `true` when toggled.
+    /// A checkable item; `checked` is toggled on click. Returns `true` when toggled. The
+    /// menu stays open (toggles are usually flipped several at a time).
     pub fn toggle(&mut self, text: &str, checked: &mut bool) -> bool {
-        let style = self.ui.style().clone();
-        let label = format!("{}  {text}", if *checked { "✓" } else { "  " });
         self.ui.set_next_width(self.width);
-        let r = self.ui.button_kind(&label, ButtonKind::Flat);
-        let _ = style;
+        let r = self.ui.menu_row(text, *checked, "");
         if r.clicked {
             *checked = !*checked;
-            self.ui.gui().close_popups();
             return true;
         }
         false
     }
 
-    /// A separator line.
+    /// A group separator: a rule with a little air on both sides.
     pub fn separator(&mut self) {
-        self.ui.separator();
+        let line = self.ui.style().palette.line;
+        self.ui.add_space(3.0);
+        let rect = self.ui.allocate(Vec2::new(self.width, 1.0));
+        self.ui.gui().paint_rect(rect, line);
+        self.ui.add_space(3.0);
     }
 
     /// The id of this menu.
@@ -74,10 +70,10 @@ impl Ui<'_> {
     pub fn menu_bar(&mut self, add: impl FnOnce(&mut Ui<'_>)) {
         let style = self.style().clone();
         let row = self.allocate_row(style.menu_height);
-        self.gui().paint_rect(row, style.palette.panel);
+        self.gui().paint_rect(row, style.palette.header);
         let id = self.make_id("menu_bar");
         let mut bar = self.child(id, row.shrink2(Vec2::new(4.0, 0.0)), Dir::Horizontal);
-        bar.set_gap(2.0);
+        bar.set_gap(0.0);
         bar.set_align(super::types::Align::Center);
         add(&mut bar);
     }
@@ -86,27 +82,44 @@ impl Ui<'_> {
     /// menu of the same bar is open, hovering this one switches to it.
     pub fn menu(&mut self, title: &str, add: impl FnOnce(&mut Menu<'_, '_>)) {
         let style = self.style().clone();
+        let p = style.palette;
         let id = self.make_id(("menu", title));
         let bar_id = self.id();
-        let r = self.button_kind(title, ButtonKind::Flat);
-        let open = self.gui().is_open(id);
+        let m = self.gui().measure(title, style.font_size);
+        let size = self.resolve_size(Vec2::new(m.x + 16.0, style.row_height));
+        let r = self.allocate_response(size, Sense::CLICK, id.with("title"));
+        let open_before = self.gui().is_open(id);
         if r.clicked {
             let was = self.gui().was_open(id);
             self.gui().close_popups();
             self.gui().set_open(id, !was);
-        } else if r.hovered && !open && self.gui().any_popup_open() && self.sibling_open(bar_id) {
+        } else if r.hovered
+            && !open_before
+            && self.gui().any_popup_open()
+            && self.sibling_open(bar_id)
+        {
             self.gui().close_popups();
             self.gui().set_open(id, true);
         }
-        if self.gui().is_open(id) {
-            self.gui().paint_rect(r.rect, style.palette.panel_alt);
-            let m = self.gui().measure(title, style.font_size);
-            let pos = r.rect.min + (r.rect.size() - m) * 0.5;
-            self.gui()
-                .paint_text(title, pos, style.font_size, style.palette.text);
+        let open = self.gui().is_open(id);
+        // Title: transparent; hover = raised + border; open = accent tint + accent border.
+        if open {
+            self.gui().paint_rect(r.rect, p.accent_bg);
+            self.gui().paint_rect_outline(r.rect, 1.0, p.accent);
+        } else if r.hovered {
+            self.gui().paint_rect(r.rect, p.raised);
+            self.gui().paint_rect_outline(r.rect, 1.0, p.line);
+        }
+        if r.hovered {
+            self.gui().set_cursor(Cursor::Pointer);
+        }
+        let pos = r.rect.min + (r.rect.size() - m) * 0.5;
+        self.gui().paint_text(title, pos, style.font_size, p.text);
+
+        if open {
             // Remember which bar owns the open menu so siblings can take over on hover.
             self.gui().set_scalar(bar_id.with("open_menu"), 1.0);
-            let width = 220.0_f32;
+            let width = POPUP_MIN_WIDTH;
             let anchor = r.rect;
             let max_h = self.gui().size().y - anchor.max.y - 8.0;
             let rect = Rect::from_min_size(
@@ -115,25 +128,43 @@ impl Ui<'_> {
             );
             let prev = self.gui().layer();
             self.gui().set_layer(LAYER_POPUP);
-            let handle = self.gui().reserve_rect();
+            let shadow = [
+                self.gui().reserve_rect(),
+                self.gui().reserve_rect(),
+                self.gui().reserve_rect(),
+            ];
             let border = self.gui().reserve_rect();
+            let handle = self.gui().reserve_rect();
             let used = {
-                let mut c = self.child(id.with("popup"), rect.shrink(1.0), Dir::Vertical);
+                let mut c = self.child(
+                    id.with("popup"),
+                    rect.shrink(1.0 + POPUP_PAD),
+                    Dir::Vertical,
+                );
                 c.set_gap(0.0);
                 let mut menu = Menu {
                     ui: &mut c,
                     id,
-                    width: width - 2.0,
+                    width: width - 2.0 - POPUP_PAD * 2.0,
                 };
                 add(&mut menu);
                 c.used_size()
             };
-            let outer = Rect::from_min_size(rect.min, Vec2::new(width, used.y + 2.0));
-            self.gui().fill_reserved(handle, outer, style.palette.popup);
-            // Border as four thin rects is not possible with one reserved quad: draw a
-            // 1px frame by filling the reserved quad slightly larger with the line colour.
+            let outer =
+                Rect::from_min_size(rect.min, Vec2::new(width, used.y + 2.0 + POPUP_PAD * 2.0));
+            for (i, h) in shadow.into_iter().enumerate() {
+                let t = (i + 1) as f32 / 3.0;
+                self.gui().fill_reserved(
+                    h,
+                    outer
+                        .translate(Vec2::new(0.0, 6.0))
+                        .expand(12.0 * (1.0 - t)),
+                    [0.0, 0.0, 0.0, 0.12 * t],
+                );
+            }
             self.gui()
-                .fill_reserved(border, outer.expand(1.0), style.palette.line);
+                .fill_reserved(border, outer.expand(1.0), p.line_hard);
+            self.gui().fill_reserved(handle, outer, p.popup);
             self.gui().register_popup(outer.expand(1.0));
             self.gui().set_layer(prev);
         } else {
@@ -164,29 +195,32 @@ impl Ui<'_> {
         }
         let style = self.style().clone();
         let at = self.gui().vec2(id).unwrap_or(response.rect.min);
-        let width = 200.0_f32;
+        let width = POPUP_MIN_WIDTH;
         let prev = self.gui().layer();
         self.gui().set_layer(LAYER_POPUP);
         let border = self.gui().reserve_rect();
         let handle = self.gui().reserve_rect();
         let rect = Rect::from_min_size(at, Vec2::new(width, self.gui().size().y - at.y));
         let used = {
-            let mut c = self.child(id.with("popup"), rect.shrink(1.0), Dir::Vertical);
+            let mut c = self.child(
+                id.with("popup"),
+                rect.shrink(1.0 + POPUP_PAD),
+                Dir::Vertical,
+            );
             c.set_gap(0.0);
             let mut menu = Menu {
                 ui: &mut c,
                 id,
-                width: width - 2.0,
+                width: width - 2.0 - POPUP_PAD * 2.0,
             };
             add(&mut menu);
             c.used_size()
         };
-        let outer = Rect::from_min_size(at, Vec2::new(width, used.y + 2.0));
+        let outer = Rect::from_min_size(at, Vec2::new(width, used.y + 2.0 + POPUP_PAD * 2.0));
         self.gui()
-            .fill_reserved(border, outer.expand(1.0), style.palette.line);
+            .fill_reserved(border, outer.expand(1.0), style.palette.line_hard);
         self.gui().fill_reserved(handle, outer, style.palette.popup);
         self.gui().register_popup(outer.expand(1.0));
         self.gui().set_layer(prev);
-        let _ = Sense::CLICK;
     }
 }
