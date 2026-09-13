@@ -505,9 +505,10 @@ struct Placed {
 impl Ui<'_> {
     /// Render `tree` over the remaining region.
     ///
-    /// The region's ground is the hard line colour so the 1 px gaps between groups read
-    /// as rules; each group is a tab strip (window ground) over a panel body. Splitters
-    /// are the 1 px gaps with a wider invisible grab area; they turn accent on hover.
+    /// Each group is a tab strip (window ground) over a panel body; the 1 px gaps between
+    /// groups are painted as hard rules (the ground itself is not painted, so a
+    /// transparent 3D panel shows through). Splitters are those gaps with a wider
+    /// invisible grab area; they turn accent on hover.
     pub fn dock(&mut self, tree: &mut DockTree, panels: &mut dyn DockPanels) -> DockResponse {
         let style = self.style().clone();
         let p = style.palette;
@@ -518,7 +519,6 @@ impl Ui<'_> {
         let Some(root) = tree.root.clone() else {
             return response;
         };
-        self.gui().paint_rect(area, p.line_hard);
 
         // Pass 1: layout (also handles splitter drags on the tree).
         let mut placed: Vec<Placed> = Vec::new();
@@ -796,13 +796,18 @@ impl Ui<'_> {
                         };
                         let hid = root_id.with(("splitter", path.clone(), i));
                         let r = self.interact(hid, hit, Sense::DRAG);
-                        if r.dragged || r.hovered {
-                            self.gui().paint_rect(handle, style.palette.accent);
+                        // The gap is the only place the ground shows: paint it as a rule
+                        // (a transparent 3D panel underneath must not be covered).
+                        let c = if r.dragged || r.hovered {
                             self.gui().set_cursor(match dir {
                                 Dir::Horizontal => Cursor::EwResize,
                                 Dir::Vertical => Cursor::NsResize,
                             });
-                        }
+                            style.palette.accent
+                        } else {
+                            style.palette.line_hard
+                        };
+                        self.gui().paint_rect(handle, c);
                         if r.dragged && extent > 0.0 {
                             let d = match dir {
                                 Dir::Horizontal => r.drag_delta.x,
