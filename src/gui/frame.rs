@@ -284,6 +284,13 @@ impl Gui {
         self.wants_keyboard || self.focus.is_some()
     }
 
+    /// The widget under the pointer so far this frame (the last one registered wins, so
+    /// a region registered *before* its children reads as hovered only when none of the
+    /// children is).
+    pub fn hovered(&self) -> Option<Id> {
+        self.hover
+    }
+
     /// The cursor shape requested by widgets this frame (hand over buttons, I-beam over
     /// fields, resize arrows over splitters). Hand it to `FrameOutput::cursor`.
     pub fn cursor(&self) -> Cursor {

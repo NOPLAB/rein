@@ -141,6 +141,14 @@ impl TextRenderer {
         self.measure_cache.clear();
     }
 
+    /// Pick the proportional and monospace families by name (`"Segoe UI"`, `"Consolas"`);
+    /// unknown names fall back to the system defaults. Clears the measure cache.
+    pub fn set_family_names(&mut self, sans: &str, mono: &str) {
+        self.family = glyphon::FamilyOwned::Name(sans.into());
+        self.mono_family = glyphon::FamilyOwned::Name(mono.into());
+        self.measure_cache.clear();
+    }
+
     /// Use this family for text drawn with [`TextStyle::mono`]. Clears the measure cache.
     pub fn set_mono_family(&mut self, family: glyphon::FamilyOwned) {
         self.mono_family = family;
