@@ -183,7 +183,7 @@ impl Ui<'_> {
     }
 
     /// A tree node: a caret column, a selectable label row (accent tint + 1 px accent
-    /// outline when selected), children indented below when open.
+    /// outline when selected), children indented below when open. Open by default.
     pub fn tree_node(
         &mut self,
         id_source: impl core::hash::Hash,
@@ -192,10 +192,29 @@ impl Ui<'_> {
         leaf: bool,
         add: impl FnOnce(&mut Ui<'_>),
     ) -> TreeResponse {
+        self.tree_node_with(id_source, text, selected, leaf, true, add)
+    }
+
+    /// [`Self::tree_node`] with an explicit initial state (a deep tree usually opens only
+    /// its root).
+    pub fn tree_node_with(
+        &mut self,
+        id_source: impl core::hash::Hash,
+        text: &str,
+        selected: bool,
+        leaf: bool,
+        default_open: bool,
+        add: impl FnOnce(&mut Ui<'_>),
+    ) -> TreeResponse {
         let style = self.style().clone();
         let id = self.make_id(("tree", id_source));
         let stored = self.gui().scalar(id);
-        let mut open = !leaf && stored >= 0.0;
+        let mut open = !leaf
+            && if stored == 0.0 {
+                default_open
+            } else {
+                stored > 0.0
+            };
         let row = self.allocate_row(style.row_height);
         let caret_w = 14.0;
         let chevron = Rect::new(row.min.x, row.min.y, caret_w, row.height());
