@@ -28,7 +28,7 @@ bytemuck = { version = "1.25", features = ["derive"] }
 winit = { version = "0.30", optional = true }
 
 # Text rendering (optional)
-glyphon = { version = "0.10", optional = true }
+glyphon = { version = "0.12", optional = true }
 
 # Math
 glam = "0.31"
