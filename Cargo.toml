@@ -31,7 +31,7 @@ winit = { version = "0.30", optional = true }
 glyphon = { version = "0.10", optional = true }
 
 # Math
-glam = "0.31"
+glam = "0.33"
 
 # URDF
 urdf-rs = "0.9"

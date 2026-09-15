@@ -6,7 +6,7 @@ publish = false
 
 [dependencies]
 rein = { path = "..", features = ["physics", "gpu-physics", "compute"] }
-glam = "0.31"
+glam = "0.33"
 hecs = "0.10"
 anyhow = "1"
 
