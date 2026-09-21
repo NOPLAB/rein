@@ -302,7 +302,7 @@ impl Viewer for OrbitCamera {
     }
 
     fn view_matrix(&self) -> Mat4 {
-        Mat4::look_at_rh(self.eye, self.target, self.view_up())
+        glam::camera::rh::view::look_at_mat4(self.eye, self.target, self.view_up())
     }
 
     fn projection_matrix(&self) -> Mat4 {
@@ -311,9 +311,21 @@ impl Viewer for OrbitCamera {
             let w = h * self.aspect();
             // Ortho keeps the same eye position; push the near plane back so objects
             // between the eye and the target plane are not clipped when zoomed in.
-            Mat4::orthographic_rh(-w * 0.5, w * 0.5, -h * 0.5, h * 0.5, -self.far, self.far)
+            glam::camera::rh::proj::directx::orthographic(
+                -w * 0.5,
+                w * 0.5,
+                -h * 0.5,
+                h * 0.5,
+                -self.far,
+                self.far,
+            )
         } else {
-            Mat4::perspective_rh(self.fov_y.to_radians(), self.aspect(), self.near, self.far)
+            glam::camera::rh::proj::directx::perspective(
+                self.fov_y.to_radians(),
+                self.aspect(),
+                self.near,
+                self.far,
+            )
         }
     }
 

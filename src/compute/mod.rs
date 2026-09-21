@@ -104,7 +104,9 @@ pub fn read_buffer_sync<T: bytemuck::Pod>(
         .expect("map_async callback never ran")
         .expect("Failed to map staging buffer");
 
-    let data = slice.get_mapped_range();
+    let data = slice
+        .get_mapped_range()
+        .expect("mapped staging buffer is unavailable");
     let result: Vec<T> = bytemuck::cast_slice(&data).to_vec();
     drop(data);
     staging.unmap();
@@ -152,7 +154,9 @@ pub async fn read_back_async<T: bytemuck::Pod>(
         .expect("map_async callback never ran")
         .expect("Failed to map staging buffer");
 
-    let data = slice.get_mapped_range();
+    let data = slice
+        .get_mapped_range()
+        .expect("mapped staging buffer is unavailable");
     let result: Vec<T> = bytemuck::cast_slice(&data).to_vec();
     drop(data);
     staging.unmap();

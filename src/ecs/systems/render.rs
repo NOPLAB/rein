@@ -47,7 +47,7 @@ impl Light for EcsLight {
 ///
 /// Returns `None` if no active camera exists.
 fn find_active_camera(world: &hecs::World) -> Option<Camera> {
-    for (_, (cam, _global)) in &mut world.query::<(&CameraComponent, &GlobalTransform)>() {
+    for (cam, _global) in &mut world.query::<(&CameraComponent, &GlobalTransform)>() {
         if cam.active {
             return Some(cam.camera.clone());
         }
@@ -58,7 +58,7 @@ fn find_active_camera(world: &hecs::World) -> Option<Camera> {
 /// Collect all lights from the ECS World.
 fn collect_lights(world: &hecs::World) -> Vec<EcsLight> {
     let mut lights = Vec::new();
-    for (_, (light, global)) in &mut world.query::<(&LightComponent, &GlobalTransform)>() {
+    for (light, global) in &mut world.query::<(&LightComponent, &GlobalTransform)>() {
         let position_or_direction = match light.light_type {
             LightType::Directional => {
                 // Extract the forward direction (-Z axis) from the transform matrix.
@@ -117,7 +117,7 @@ pub fn render_system(
         let mut query = world
             .query::<(&MeshRenderer, &GlobalTransform)>()
             .with::<&Visible>();
-        for (_, (renderer, global)) in &mut query {
+        for (renderer, global) in &mut query {
             if !renderer.visible {
                 continue;
             }

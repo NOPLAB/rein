@@ -361,8 +361,8 @@ impl GpuPhysics {
         let mut entity_map = Vec::new();
         let mut max_extent: f32 = 0.0;
 
-        for (entity, (collider, transform, rb)) in
-            &mut world.query::<(&Collider, &GlobalTransform, &RigidBody)>()
+        for (entity, collider, transform, rb) in
+            &mut world.query::<(hecs::Entity, &Collider, &GlobalTransform, &RigidBody)>()
         {
             if collider.is_sensor {
                 continue;
@@ -792,9 +792,11 @@ impl GpuPhysics {
         let mut bodies = Vec::new();
         let mut entity_map = Vec::new();
 
-        for (entity, (rb, transform)) in
-            &mut world.query::<(&RigidBody, &crate::ecs::components::transform::Transform)>()
-        {
+        for (entity, rb, transform) in &mut world.query::<(
+            hecs::Entity,
+            &RigidBody,
+            &crate::ecs::components::transform::Transform,
+        )>() {
             let body_type = match rb.body_type {
                 RigidBodyType::Dynamic => 0_u32,
                 RigidBodyType::Static => 1,

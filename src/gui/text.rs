@@ -244,12 +244,9 @@ impl TextRenderer {
             )
         });
 
-        buffer.set_metrics(
-            &mut self.font_system,
-            Metrics::new(font_size, font_size * 1.2),
-        );
+        buffer.set_metrics(Metrics::new(font_size, font_size * 1.2));
         let attrs = attrs_for(&self.family, &self.mono_family, style);
-        buffer.set_text(&mut self.font_system, text, &attrs, Shaping::Advanced, None);
+        buffer.set_text(text, &attrs, Shaping::Advanced, None);
         buffer.shape_until_scroll(&mut self.font_system, false);
 
         // glyphon takes sRGB and converts to linear itself (`ColorMode::Accurate`).
@@ -292,13 +289,11 @@ impl TextRenderer {
     fn measure_uncached(&mut self, text: &str, font_size: f32, style: TextStyle) -> (f32, f32) {
         let text = spaced(text, style.letter_spacing);
         let text = text.as_ref();
-        self.scratch_buffer.set_metrics(
-            &mut self.font_system,
-            Metrics::new(font_size, font_size * 1.2),
-        );
+        self.scratch_buffer
+            .set_metrics(Metrics::new(font_size, font_size * 1.2));
         let attrs = attrs_for(&self.family, &self.mono_family, style);
         self.scratch_buffer
-            .set_text(&mut self.font_system, text, &attrs, Shaping::Advanced, None);
+            .set_text(text, &attrs, Shaping::Advanced, None);
         self.scratch_buffer
             .shape_until_scroll(&mut self.font_system, false);
 

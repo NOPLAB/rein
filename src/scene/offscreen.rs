@@ -130,7 +130,10 @@ impl OffscreenTarget {
             tracing::error!("offscreen read-back mapping failed");
             return Vec::new();
         }
-        let data = slice.get_mapped_range();
+        let Ok(data) = slice.get_mapped_range() else {
+            tracing::error!("offscreen mapped range is unavailable");
+            return Vec::new();
+        };
         let mut out = Vec::with_capacity((unpadded * self.height) as usize);
         for row in data.chunks_exact(padded as usize) {
             out.extend_from_slice(&row[..unpadded as usize]);

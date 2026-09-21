@@ -142,9 +142,9 @@ Collider shapes: `Sphere`, `Box`, `Capsule`, `Cylinder`, `ConvexHull` - each wit
 
 ## Dependencies
 
-- `wgpu` 28 - GPU backend
-- `glam` 0.31 - Math (Vec3, Mat4, Quat, etc.)
-- `hecs` 0.10 - ECS (optional)
+- `wgpu` 30 - GPU backend
+- `glam` 0.33 - Math (Vec3, Mat4, Quat, etc.)
+- `hecs` 0.11 - ECS (optional)
 - `urdf-rs` 0.9 - URDF parsing
 - `winit` 0.30 - Window management (optional)
-- `glyphon` 0.10 - Text rendering (optional)
+- `glyphon` 0.12 - Text rendering (optional)

@@ -84,7 +84,7 @@ fn main() -> anyhow::Result<()> {
         }
 
         // Update camera viewport
-        for (_, (cam,)) in state.world.query_mut::<(&mut CameraComponent,)>() {
+        for (cam,) in state.world.query_mut::<(&mut CameraComponent,)>() {
             if cam.active {
                 cam.camera.set_viewport(frame.viewport);
             }

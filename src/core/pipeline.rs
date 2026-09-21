@@ -13,8 +13,8 @@ pub struct PipelineBuilder<'a> {
     shader_source: Option<&'a str>,
     vertex_entry: &'a str,
     fragment_entry: &'a str,
-    vertex_layouts: Vec<wgpu::VertexBufferLayout<'a>>,
-    bind_group_layouts: Vec<&'a wgpu::BindGroupLayout>,
+    vertex_layouts: Vec<Option<wgpu::VertexBufferLayout<'a>>>,
+    bind_group_layouts: Vec<Option<&'a wgpu::BindGroupLayout>>,
     color_format: wgpu::TextureFormat,
     depth_state: Option<DepthState>,
     blend_state: BlendState,
@@ -79,13 +79,13 @@ impl<'a> PipelineBuilder<'a> {
 
     /// Add a vertex buffer layout.
     pub fn vertex_layout(mut self, layout: wgpu::VertexBufferLayout<'a>) -> Self {
-        self.vertex_layouts.push(layout);
+        self.vertex_layouts.push(Some(layout));
         self
     }
 
     /// Add a bind group layout.
     pub fn bind_group_layout(mut self, layout: &'a wgpu::BindGroupLayout) -> Self {
-        self.bind_group_layouts.push(layout);
+        self.bind_group_layouts.push(Some(layout));
         self
     }
 
@@ -276,7 +276,7 @@ pub struct ComputePipelineBuilder<'a> {
     label: Option<&'a str>,
     shader_source: Option<&'a str>,
     entry_point: &'a str,
-    bind_group_layouts: Vec<&'a wgpu::BindGroupLayout>,
+    bind_group_layouts: Vec<Option<&'a wgpu::BindGroupLayout>>,
 }
 
 impl<'a> ComputePipelineBuilder<'a> {
@@ -311,7 +311,7 @@ impl<'a> ComputePipelineBuilder<'a> {
 
     /// Add a bind group layout.
     pub fn bind_group_layout(mut self, layout: &'a wgpu::BindGroupLayout) -> Self {
-        self.bind_group_layouts.push(layout);
+        self.bind_group_layouts.push(Some(layout));
         self
     }
 

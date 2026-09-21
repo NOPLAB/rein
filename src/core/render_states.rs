@@ -180,8 +180,8 @@ impl DepthState {
     pub fn to_wgpu(&self, format: wgpu::TextureFormat) -> wgpu::DepthStencilState {
         wgpu::DepthStencilState {
             format,
-            depth_write_enabled: self.write,
-            depth_compare: self.compare,
+            depth_write_enabled: Some(self.write),
+            depth_compare: Some(self.compare),
             stencil: wgpu::StencilState::default(),
             bias: wgpu::DepthBiasState::default(),
         }

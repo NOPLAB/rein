@@ -252,7 +252,8 @@ mod tests {
     #[test]
     fn test_frustum_contains_point() {
         // Simple orthographic-like frustum
-        let vp = Mat4::orthographic_rh(-10.0, 10.0, -10.0, 10.0, 0.1, 100.0);
+        let vp =
+            glam::camera::rh::proj::directx::orthographic(-10.0, 10.0, -10.0, 10.0, 0.1, 100.0);
         let frustum = Frustum::from_view_projection(vp);
 
         // Point inside
@@ -264,7 +265,8 @@ mod tests {
 
     #[test]
     fn test_aabb_inside_frustum() {
-        let vp = Mat4::orthographic_rh(-10.0, 10.0, -10.0, 10.0, 0.1, 100.0);
+        let vp =
+            glam::camera::rh::proj::directx::orthographic(-10.0, 10.0, -10.0, 10.0, 0.1, 100.0);
         let frustum = Frustum::from_view_projection(vp);
 
         // AABB completely inside

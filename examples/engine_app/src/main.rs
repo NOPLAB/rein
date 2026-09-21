@@ -75,7 +75,7 @@ impl App for MyApp {
         }
 
         // Update camera viewport
-        for (_, (cam,)) in world.query_mut::<(&mut CameraComponent,)>() {
+        for (cam,) in world.query_mut::<(&mut CameraComponent,)>() {
             if cam.active {
                 cam.camera.set_viewport(ctx.viewport);
             }

@@ -14,7 +14,7 @@ const SLEEP_TIME: f32 = 1.0;
 
 /// Apply gravity force to all dynamic rigid bodies.
 pub fn apply_gravity(world: &mut hecs::World, gravity: Vec3) {
-    for (_, (rb, sleep)) in world.query_mut::<(&mut RigidBody, Option<&SleepInfo>)>() {
+    for (rb, sleep) in world.query_mut::<(&mut RigidBody, Option<&SleepInfo>)>() {
         let is_sleeping = sleep.is_some_and(|s| s.state == SleepState::Sleeping);
         if rb.body_type == RigidBodyType::Dynamic && rb.mass > 0.0 && !is_sleeping {
             rb.force_accumulator += gravity * rb.mass * rb.gravity_scale;
@@ -24,7 +24,7 @@ pub fn apply_gravity(world: &mut hecs::World, gravity: Vec3) {
 
 /// Integrate velocities using semi-implicit Euler: v += (F/m) * dt.
 pub fn integrate_velocities(world: &mut hecs::World, dt: f32) {
-    for (_, (rb, sleep)) in world.query_mut::<(&mut RigidBody, Option<&SleepInfo>)>() {
+    for (rb, sleep) in world.query_mut::<(&mut RigidBody, Option<&SleepInfo>)>() {
         let is_sleeping = sleep.is_some_and(|s| s.state == SleepState::Sleeping);
         if rb.body_type != RigidBodyType::Dynamic || rb.mass <= 0.0 || is_sleeping {
             continue;
@@ -57,14 +57,14 @@ pub fn integrate_velocities(world: &mut hecs::World, dt: f32) {
         rb.angular_velocity += rb.torque_accumulator * inv_inertia * dt;
 
         // Apply damping
-        rb.linear_velocity *= (1.0 - rb.linear_damping).max(0.0);
-        rb.angular_velocity *= (1.0 - rb.angular_damping).max(0.0);
+        rb.linear_velocity *= (1.0_f32 - rb.linear_damping).max(0.0);
+        rb.angular_velocity *= (1.0_f32 - rb.angular_damping).max(0.0);
     }
 }
 
 /// Integrate positions: p += v * dt, q += 0.5 * omega * q * dt.
 pub fn integrate_positions(world: &mut hecs::World, dt: f32) {
-    for (_, (rb, transform, sleep)) in
+    for (rb, transform, sleep) in
         world.query_mut::<(&RigidBody, &mut Transform, Option<&SleepInfo>)>()
     {
         let is_sleeping = sleep.is_some_and(|s| s.state == SleepState::Sleeping);
@@ -94,14 +94,14 @@ pub fn integrate_positions(world: &mut hecs::World, dt: f32) {
 
 /// Synchronize RigidBody positions/rotations to Transform and GlobalTransform.
 pub fn sync_transforms(world: &mut hecs::World) {
-    for (_, (transform, global)) in world.query_mut::<(&Transform, &mut GlobalTransform)>() {
+    for (transform, global) in world.query_mut::<(&Transform, &mut GlobalTransform)>() {
         global.0 = transform.to_matrix();
     }
 }
 
 /// Clear force and torque accumulators on all rigid bodies.
 pub fn clear_forces(world: &mut hecs::World) {
-    for (_, rb) in world.query_mut::<&mut RigidBody>() {
+    for rb in world.query_mut::<&mut RigidBody>() {
         rb.force_accumulator = Vec3::ZERO;
         rb.torque_accumulator = Vec3::ZERO;
     }
@@ -112,7 +112,7 @@ pub fn clear_forces(world: &mut hecs::World) {
 /// Bodies with velocities below thresholds for `SLEEP_TIME` seconds
 /// transition to `Sleeping`. Sleeping bodies skip integration and gravity.
 pub fn update_sleep_states(world: &mut hecs::World, dt: f32) {
-    for (_, (rb, sleep)) in world.query_mut::<(&mut RigidBody, &mut SleepInfo)>() {
+    for (rb, sleep) in world.query_mut::<(&mut RigidBody, &mut SleepInfo)>() {
         if rb.body_type != RigidBodyType::Dynamic {
             continue;
         }

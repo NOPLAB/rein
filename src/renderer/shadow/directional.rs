@@ -98,11 +98,11 @@ impl DirectionalShadow {
 
         // Light view matrix - looking from "infinity" in light direction
         let light_pos = camera.position - light_dir * scene_radius * 2.0;
-        let light_view = Mat4::look_at_rh(light_pos, camera.position, Vec3::Y);
+        let light_view = glam::camera::rh::view::look_at_mat4(light_pos, camera.position, Vec3::Y);
 
         // Orthographic projection that covers the scene
         let ortho_size = scene_radius * 1.5;
-        let light_proj = Mat4::orthographic_rh(
+        let light_proj = glam::camera::rh::proj::directx::orthographic(
             -ortho_size,
             ortho_size,
             -ortho_size,

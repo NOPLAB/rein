@@ -112,10 +112,10 @@ where
         );
 
         // Create wgpu instance and surface
-        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::all(),
-            ..Default::default()
-        });
+        let instance =
+            wgpu::Instance::new(wgpu::InstanceDescriptor::new_with_display_handle_from_env(
+                Box::new(event_loop.owned_display_handle()),
+            ));
 
         let surface = instance
             .create_surface(Arc::clone(&window))
@@ -125,6 +125,7 @@ where
             power_preference: wgpu::PowerPreference::HighPerformance,
             compatible_surface: Some(&surface),
             force_fallback_adapter: false,
+            apply_limit_buckets: false,
         }))
         .expect("Failed to find suitable GPU adapter");
 
@@ -152,6 +153,7 @@ where
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format,
+            color_space: wgpu::SurfaceColorSpace::Auto,
             width: size.width.max(1),
             height: size.height.max(1),
             present_mode: if self.settings.vsync {
@@ -311,15 +313,18 @@ where
                 self.last_frame_time = now;
 
                 let surface_texture = match graphics.surface.get_current_texture() {
-                    Ok(texture) => texture,
-                    Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
+                    wgpu::CurrentSurfaceTexture::Success(texture)
+                    | wgpu::CurrentSurfaceTexture::Suboptimal(texture) => texture,
+                    wgpu::CurrentSurfaceTexture::Lost | wgpu::CurrentSurfaceTexture::Outdated => {
                         graphics
                             .surface
                             .configure(&graphics.ctx.device, &graphics.config);
                         return;
                     }
-                    Err(e) => {
-                        tracing::error!("Surface error: {:?}", e);
+                    wgpu::CurrentSurfaceTexture::Timeout
+                    | wgpu::CurrentSurfaceTexture::Occluded => return,
+                    wgpu::CurrentSurfaceTexture::Validation => {
+                        tracing::error!("surface validation error");
                         return;
                     }
                 };
@@ -354,7 +359,7 @@ where
                 let callback = self.callback.as_mut().expect("Callback should exist");
                 let output = (callback)(state, frame_input);
 
-                surface_texture.present();
+                graphics.ctx.queue.present(surface_texture);
 
                 if let Some(cursor) = output.cursor {
                     if cursor != self.cursor {
