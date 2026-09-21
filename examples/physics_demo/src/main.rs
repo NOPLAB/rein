@@ -11,7 +11,7 @@ use rein::ecs::components::rendering::{
     Visible,
 };
 use rein::ecs::components::transform::{GlobalTransform, Transform};
-use rein::engine::{App, GameLoopConfig, SystemContext, run_app};
+use rein::engine::{run_app, App, GameLoopConfig, SystemContext};
 use rein::physics::{PhysicsConfig, PhysicsWorld};
 use rein::renderer::light::LightType;
 use rein::{Camera, ColorMaterial, Mesh, WgpuContext, WindowSettings};

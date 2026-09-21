@@ -12,7 +12,7 @@ use rein::ecs::components::rendering::{
     Visible,
 };
 use rein::ecs::components::transform::{GlobalTransform, Transform};
-use rein::engine::{App, GameLoopConfig, SystemContext, run_app};
+use rein::engine::{run_app, App, GameLoopConfig, SystemContext};
 use rein::physics::{PhysicsConfig, PhysicsWorld};
 use rein::renderer::light::LightType;
 use rein::{Camera, ColorMaterial, Mesh, WgpuContext, WindowSettings};
@@ -74,8 +74,7 @@ impl App for MassPhysicsApp {
         if !self.ground_spawned {
             self.spawn_ground(world, ctx);
             self.cube_mesh = Some(Arc::new(Mesh::cube(ctx.ctx, 0.8, [0.8, 0.4, 0.3])));
-            self.sphere_mesh =
-                Some(Arc::new(Mesh::sphere(ctx.ctx, 0.4, 12, 8, [0.3, 0.5, 0.8])));
+            self.sphere_mesh = Some(Arc::new(Mesh::sphere(ctx.ctx, 0.4, 12, 8, [0.3, 0.5, 0.8])));
             self.ground_spawned = true;
         }
 
@@ -159,8 +158,8 @@ impl MassPhysicsApp {
             r * angle.sin(),
         );
 
-        let material = ColorMaterial::new(ctx.ctx, ctx.surface_format)
-            .expect("Failed to create material");
+        let material =
+            ColorMaterial::new(ctx.ctx, ctx.surface_format).expect("Failed to create material");
 
         let (mesh, collider_shape) = if is_sphere {
             (

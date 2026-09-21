@@ -243,7 +243,7 @@ const SPAWN_HEIGHT: f32 = 15.0;
 
 /// Spawn a single physics object at a deterministic position.
 fn spawn_object(world: &mut hecs::World, index: usize) {
-    let is_sphere = index % 2 == 0;
+    let is_sphere = index.is_multiple_of(2);
     let angle = (index * 137) as f32 * 0.01;
     let r = SPAWN_RADIUS * (((index * 73 + 17) % 100) as f32 / 100.0).sqrt();
     let height_jitter = (index % 5) as f32 * 0.6;
@@ -332,10 +332,7 @@ pub fn create_headless_context() -> anyhow::Result<WgpuContext> {
 }
 
 /// Setup a GPU-enabled physics scene: ground + `n` bodies + GPU physics init.
-pub fn setup_gpu_scene(
-    ctx: &WgpuContext,
-    n: usize,
-) -> anyhow::Result<(hecs::World, PhysicsWorld)> {
+pub fn setup_gpu_scene(ctx: &WgpuContext, n: usize) -> anyhow::Result<(hecs::World, PhysicsWorld)> {
     let (world, mut physics) = setup_scene(n);
     physics.init_gpu(ctx, n.max(256))?;
     Ok((world, physics))

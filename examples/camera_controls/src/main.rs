@@ -9,9 +9,9 @@
 
 use glam::{Mat4, Vec3};
 use rein::{
-    AmbientLight, Axes, Camera, ClearState, ColorMaterial, DirectionalLight, FrameOutput,
-    Geometry, Gm, Light, LineMaterial, Mesh, Object, OrbitControl, Window, WindowSettings,
-    screen_target,
+    screen_target, AmbientLight, Axes, Camera, ClearState, ColorMaterial, DirectionalLight,
+    FrameOutput, Geometry, Gm, Light, LineMaterial, Mesh, Object, OrbitControl, Window,
+    WindowSettings,
 };
 
 fn main() -> anyhow::Result<()> {

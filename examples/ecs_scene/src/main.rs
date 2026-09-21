@@ -5,9 +5,6 @@
 use std::sync::Arc;
 
 use glam::Vec3;
-use rein::{
-    Camera, ClearState, ColorMaterial, FrameOutput, Mesh, Window, WindowSettings, screen_target,
-};
 use rein::ecs::components::rendering::{
     CameraComponent, FrustumCullable, LightComponent, MaterialHandle, MeshHandle, MeshRenderer,
     Visible,
@@ -15,6 +12,9 @@ use rein::ecs::components::rendering::{
 use rein::ecs::components::transform::{GlobalTransform, Transform};
 use rein::ecs::systems::{culling_system, render_system, transform_system};
 use rein::renderer::light::LightType;
+use rein::{
+    screen_target, Camera, ClearState, ColorMaterial, FrameOutput, Mesh, Window, WindowSettings,
+};
 
 fn main() -> anyhow::Result<()> {
     let window = Window::new(WindowSettings::default().title("ECS Scene"))?;

@@ -26,16 +26,17 @@ cargo clippy --all-features        # Linting
 cargo fmt                          # Format code
 ```
 
-Examples are separate crates in `examples/`:
+Examples are workspace members in `examples/`:
 ```bash
-cd examples/hello_cube && cargo run        # Run an example
-cd examples/physics_demo && cargo run      # Physics example
+cargo run -p hello_cube                    # Run an example
+cargo run -p physics_demo                  # Physics example
+cargo check --workspace                    # Check all examples and benchmarks
 ```
 
 Benchmarks are in `benchmarks/`:
 ```bash
-cd benchmarks && cargo bench --bench physics       # Criterion benchmarks
-cd benchmarks && cargo bench --bench physics_iai   # IAI-Callgrind benchmarks
+cargo bench -p rein-bench --bench physics       # Criterion benchmarks
+cargo bench -p rein-bench --bench physics_iai   # IAI-Callgrind benchmarks
 ```
 
 ## Architecture

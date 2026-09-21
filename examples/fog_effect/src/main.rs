@@ -53,8 +53,11 @@ fn main() -> anyhow::Result<()> {
                     let material = ColorMaterial::new(frame.ctx, frame.surface_format)
                         .expect("Failed to create material");
                     let mesh = Mesh::sphere(frame.ctx, 0.4, 16, 12, [0.8, 0.3, 0.3]);
-                    let sphere = Gm::new(mesh, material)
-                        .with_position(x as f32 * 2.0, 0.0, -(z as f32) * 3.0);
+                    let sphere = Gm::new(mesh, material).with_position(
+                        x as f32 * 2.0,
+                        0.0,
+                        -(z as f32) * 3.0,
+                    );
                     state.spheres.push(sphere);
                 }
             }
@@ -77,7 +80,7 @@ fn main() -> anyhow::Result<()> {
         let vp = frame.viewport;
 
         // Ensure offscreen textures exist
-        let needs_resize = state.color_texture.as_ref().map_or(true, |t| {
+        let needs_resize = state.color_texture.as_ref().is_none_or(|t| {
             let (w, h) = t.size();
             w != vp.width || h != vp.height
         });
@@ -149,7 +152,7 @@ fn main() -> anyhow::Result<()> {
                 &mut encoder,
                 color_tex.view(),
                 depth_tex.view(),
-                &frame.surface_view,
+                frame.surface_view,
             );
         }
 

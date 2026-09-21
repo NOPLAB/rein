@@ -6,8 +6,8 @@
 
 use glam::Vec3;
 use rein::{
-    AmbientLight, Camera, ClearState, ColorMaterial, DirectionalLight, FrameOutput, Gm, Light,
-    Mesh, Object, OrbitControl, PointLight, Window, WindowSettings, screen_target,
+    screen_target, AmbientLight, Camera, ClearState, ColorMaterial, DirectionalLight, FrameOutput,
+    Gm, Light, Mesh, Object, OrbitControl, PointLight, Window, WindowSettings,
 };
 
 fn main() -> anyhow::Result<()> {
@@ -44,9 +44,24 @@ fn main() -> anyhow::Result<()> {
         ambient_light: AmbientLight::white(0.15),
         directional_light: DirectionalLight::white(0.6, Vec3::new(-0.5, -1.0, -0.3)),
         point_lights: vec![
-            PointLight::new(2.0, [1.0, 0.3, 0.3], Vec3::new(-3.0, 2.0, 0.0), [1.0, 0.14, 0.07]),
-            PointLight::new(2.0, [0.3, 1.0, 0.3], Vec3::new(3.0, 2.0, 0.0), [1.0, 0.14, 0.07]),
-            PointLight::new(2.0, [0.3, 0.3, 1.0], Vec3::new(0.0, 2.0, 3.0), [1.0, 0.14, 0.07]),
+            PointLight::new(
+                2.0,
+                [1.0, 0.3, 0.3],
+                Vec3::new(-3.0, 2.0, 0.0),
+                [1.0, 0.14, 0.07],
+            ),
+            PointLight::new(
+                2.0,
+                [0.3, 1.0, 0.3],
+                Vec3::new(3.0, 2.0, 0.0),
+                [1.0, 0.14, 0.07],
+            ),
+            PointLight::new(
+                2.0,
+                [0.3, 0.3, 1.0],
+                Vec3::new(0.0, 2.0, 3.0),
+                [1.0, 0.14, 0.07],
+            ),
         ],
         initialized: false,
     };
@@ -60,8 +75,8 @@ fn main() -> anyhow::Result<()> {
                     let material = ColorMaterial::new(frame.ctx, frame.surface_format)
                         .expect("Failed to create material");
                     let mesh = Mesh::sphere(frame.ctx, 0.4, 24, 16, [0.9, 0.9, 0.9]);
-                    let sphere = Gm::new(mesh, material)
-                        .with_position(x as f32 * 1.5, 0.5, z as f32 * 1.5);
+                    let sphere =
+                        Gm::new(mesh, material).with_position(x as f32 * 1.5, 0.5, z as f32 * 1.5);
                     state.spheres.push(sphere);
                 }
             }
