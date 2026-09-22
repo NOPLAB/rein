@@ -7,8 +7,53 @@ use std::collections::HashMap;
 
 use glyphon::{
     Attrs, Buffer, Cache, Color, FontSystem, Metrics, Resolution, Shaping, SwashCache, TextArea,
-    TextAtlas, TextBounds, TextRenderer as GlyphonTextRenderer,
+    TextAtlas, TextBounds, TextRenderer as GlyphonTextRenderer, Weight,
 };
+
+/// Per-call text attributes on top of the renderer's family.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TextStyle {
+    /// Use the monospace family (see [`TextRenderer::set_mono_family`]).
+    pub mono: bool,
+    /// Font weight (CSS scale: 400 normal, 600 semi-bold, 700 bold).
+    pub weight: u16,
+    /// Extra advance per glyph, as a fraction of the font size (CSS `letter-spacing` in em).
+    pub letter_spacing: f32,
+}
+
+impl Default for TextStyle {
+    fn default() -> Self {
+        Self::NORMAL
+    }
+}
+
+impl TextStyle {
+    /// Proportional, normal weight.
+    pub const NORMAL: Self = Self {
+        mono: false,
+        weight: 400,
+        letter_spacing: 0.0,
+    };
+    /// Monospace, normal weight.
+    pub const MONO: Self = Self {
+        mono: true,
+        weight: 400,
+        letter_spacing: 0.0,
+    };
+    /// Proportional, semi-bold.
+    pub const SEMIBOLD: Self = Self {
+        mono: false,
+        weight: 600,
+        letter_spacing: 0.0,
+    };
+
+    /// With `letter_spacing` (em).
+    #[must_use]
+    pub const fn spaced(mut self, letter_spacing: f32) -> Self {
+        self.letter_spacing = letter_spacing;
+        self
+    }
+}
 
 struct TextEntry {
     buffer: Buffer,
@@ -43,10 +88,13 @@ pub struct TextRenderer {
 
     /// Font family for every draw / measure call.
     family: glyphon::FamilyOwned,
+    /// Family used when [`TextStyle::mono`] is set.
+    mono_family: glyphon::FamilyOwned,
     /// Layer new entries are tagged with (see [`Self::set_layer`]).
     layer: u8,
-    /// `(text, size bits)` → `(width, height)`; shaping is the cost, and labels repeat.
-    measure_cache: HashMap<(String, u32), (f32, f32)>,
+    /// `(text, size bits, style)` → `(width, height)`; shaping is the cost, and labels
+    /// repeat.
+    measure_cache: HashMap<(String, u32, MeasureKey), (f32, f32)>,
 }
 
 impl TextRenderer {
@@ -80,6 +128,7 @@ impl TextRenderer {
             clip_stack: Vec::new(),
             viewport,
             family: glyphon::FamilyOwned::Monospace,
+            mono_family: glyphon::FamilyOwned::Monospace,
             layer: 0,
             measure_cache: HashMap::new(),
         }
@@ -89,6 +138,20 @@ impl TextRenderer {
     /// `FamilyOwned::Name("Noto Sans JP".into())`, …). Clears the measure cache.
     pub fn set_family(&mut self, family: glyphon::FamilyOwned) {
         self.family = family;
+        self.measure_cache.clear();
+    }
+
+    /// Pick the proportional and monospace families by name (`"Segoe UI"`, `"Consolas"`);
+    /// unknown names fall back to the system defaults. Clears the measure cache.
+    pub fn set_family_names(&mut self, sans: &str, mono: &str) {
+        self.family = glyphon::FamilyOwned::Name(sans.into());
+        self.mono_family = glyphon::FamilyOwned::Name(mono.into());
+        self.measure_cache.clear();
+    }
+
+    /// Use this family for text drawn with [`TextStyle::mono`]. Clears the measure cache.
+    pub fn set_mono_family(&mut self, family: glyphon::FamilyOwned) {
+        self.mono_family = family;
         self.measure_cache.clear();
     }
 
@@ -157,7 +220,23 @@ impl TextRenderer {
     }
 
     /// Draw text immediately (queues for render).
+    /// Queue `text` at (`x`, `y`) (top-left) in **linear** `color`.
     pub fn draw_text(&mut self, text: &str, x: f32, y: f32, font_size: f32, color: [f32; 4]) {
+        self.draw_text_styled(text, x, y, font_size, color, TextStyle::NORMAL);
+    }
+
+    /// [`Self::draw_text`] with explicit family / weight / letter spacing.
+    pub fn draw_text_styled(
+        &mut self,
+        text: &str,
+        x: f32,
+        y: f32,
+        font_size: f32,
+        color: [f32; 4],
+        style: TextStyle,
+    ) {
+        let text = spaced(text, style.letter_spacing);
+        let text = text.as_ref();
         let mut buffer = self.available_buffers.pop().unwrap_or_else(|| {
             Buffer::new(
                 &mut self.font_system,
@@ -165,28 +244,22 @@ impl TextRenderer {
             )
         });
 
-        buffer.set_metrics(
-            &mut self.font_system,
-            Metrics::new(font_size, font_size * 1.2),
-        );
-        buffer.set_text(
-            &mut self.font_system,
-            text,
-            &Attrs::new().family(self.family.as_family()),
-            Shaping::Advanced,
-            None,
-        );
+        buffer.set_metrics(Metrics::new(font_size, font_size * 1.2));
+        let attrs = attrs_for(&self.family, &self.mono_family, style);
+        buffer.set_text(text, &attrs, Shaping::Advanced, None);
         buffer.shape_until_scroll(&mut self.font_system, false);
 
+        // glyphon takes sRGB and converts to linear itself (`ColorMode::Accurate`).
+        let ch = |c: f32| (super::style::linear_to_srgb(c.clamp(0.0, 1.0)) * 255.0).round() as u8;
         self.entries.push(TextEntry {
             buffer,
             left: x,
             top: y,
             color: Color::rgba(
-                (color[0] * 255.0) as u8,
-                (color[1] * 255.0) as u8,
-                (color[2] * 255.0) as u8,
-                (color[3] * 255.0) as u8,
+                ch(color[0]),
+                ch(color[1]),
+                ch(color[2]),
+                (color[3].clamp(0.0, 1.0) * 255.0).round() as u8,
             ),
             clip: self.clip_stack.last().copied(),
             layer: self.layer,
@@ -195,27 +268,32 @@ impl TextRenderer {
 
     /// Measure text dimensions.
     pub fn measure(&mut self, text: &str, font_size: f32) -> (f32, f32) {
-        let key = (text.to_owned(), font_size.to_bits());
+        self.measure_styled(text, font_size, TextStyle::NORMAL)
+    }
+
+    /// [`Self::measure`] with explicit family / weight / letter spacing.
+    pub fn measure_styled(&mut self, text: &str, font_size: f32, style: TextStyle) -> (f32, f32) {
+        let key = (
+            text.to_owned(),
+            font_size.to_bits(),
+            MeasureKey::from(style),
+        );
         if let Some(&m) = self.measure_cache.get(&key) {
             return m;
         }
-        let m = self.measure_uncached(text, font_size);
+        let m = self.measure_uncached(text, font_size, style);
         let _ = self.measure_cache.insert(key, m);
         m
     }
 
-    fn measure_uncached(&mut self, text: &str, font_size: f32) -> (f32, f32) {
-        self.scratch_buffer.set_metrics(
-            &mut self.font_system,
-            Metrics::new(font_size, font_size * 1.2),
-        );
-        self.scratch_buffer.set_text(
-            &mut self.font_system,
-            text,
-            &Attrs::new().family(self.family.as_family()),
-            Shaping::Advanced,
-            None,
-        );
+    fn measure_uncached(&mut self, text: &str, font_size: f32, style: TextStyle) -> (f32, f32) {
+        let text = spaced(text, style.letter_spacing);
+        let text = text.as_ref();
+        self.scratch_buffer
+            .set_metrics(Metrics::new(font_size, font_size * 1.2));
+        let attrs = attrs_for(&self.family, &self.mono_family, style);
+        self.scratch_buffer
+            .set_text(text, &attrs, Shaping::Advanced, None);
         self.scratch_buffer
             .shape_until_scroll(&mut self.font_system, false);
 
@@ -330,6 +408,58 @@ impl TextRenderer {
     pub fn trim(&mut self) {
         self.atlas.trim();
     }
+}
+
+/// glyphon attributes for `style` (fields are borrowed separately so buffers and the font
+/// system stay mutably available).
+fn attrs_for<'a>(
+    family: &'a glyphon::FamilyOwned,
+    mono: &'a glyphon::FamilyOwned,
+    style: TextStyle,
+) -> Attrs<'a> {
+    let family = if style.mono { mono } else { family };
+    Attrs::new()
+        .family(family.as_family())
+        .weight(Weight(style.weight))
+}
+
+/// Hashable form of a [`TextStyle`] for the measure cache.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct MeasureKey {
+    mono: bool,
+    weight: u16,
+    spacing: u32,
+}
+
+impl From<TextStyle> for MeasureKey {
+    fn from(s: TextStyle) -> Self {
+        Self {
+            mono: s.mono,
+            weight: s.weight,
+            spacing: s.letter_spacing.to_bits(),
+        }
+    }
+}
+
+/// Letter spacing is emulated by interleaving hair spaces (U+200A) — cosmic-text has no
+/// per-glyph advance, and the headings that use it are a few characters long.
+fn spaced(text: &str, letter_spacing: f32) -> std::borrow::Cow<'_, str> {
+    if letter_spacing <= 0.0 || text.chars().count() < 2 {
+        return std::borrow::Cow::Borrowed(text);
+    }
+    // One hair space is about 1/8 em; round the requested spacing to that unit.
+    let n = ((letter_spacing * 8.0).round() as usize).max(1);
+    let filler = "\u{200a}".repeat(n);
+    let mut out = String::with_capacity(text.len() * (n + 1));
+    let mut first = true;
+    for c in text.chars() {
+        if !first {
+            out.push_str(&filler);
+        }
+        first = false;
+        out.push(c);
+    }
+    std::borrow::Cow::Owned(out)
 }
 
 /// Helper for building text content with formatting.

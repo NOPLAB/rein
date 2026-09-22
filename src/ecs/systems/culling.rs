@@ -26,7 +26,7 @@ pub fn culling_system(world: &mut hecs::World) {
     // Find the active camera and build frustum.
     let frustum = {
         let mut found = None;
-        for (_, (cam, _global)) in
+        for (cam, _global) in
             world.query_mut::<hecs::Without<(&CameraComponent, &GlobalTransform), &MeshRenderer>>()
         {
             if cam.active {
@@ -45,8 +45,9 @@ pub fn culling_system(world: &mut hecs::World) {
     let mut to_add_visible: Vec<hecs::Entity> = Vec::new();
     let mut to_remove_visible: Vec<hecs::Entity> = Vec::new();
 
-    for (entity, (renderer, global)) in
-        world.query_mut::<hecs::With<(&MeshRenderer, &GlobalTransform), &FrustumCullable>>()
+    for (entity, renderer, global) in world
+        .query_mut::<hecs::With<(hecs::Entity, &MeshRenderer, &GlobalTransform), &FrustumCullable>>(
+        )
     {
         let local_aabb = renderer.mesh.0.aabb();
         let world_aabb = compute_world_aabb(local_aabb, global.0);
@@ -61,12 +62,12 @@ pub fn culling_system(world: &mut hecs::World) {
     // Apply changes via CommandBuffer.
     let mut cmd = hecs::CommandBuffer::new();
     for entity in to_add_visible {
-        if !world.satisfies::<&Visible>(entity).unwrap_or(false) {
+        if !world.satisfies::<&Visible>(entity) {
             cmd.insert_one(entity, Visible);
         }
     }
     for entity in to_remove_visible {
-        if world.satisfies::<&Visible>(entity).unwrap_or(false) {
+        if world.satisfies::<&Visible>(entity) {
             cmd.remove_one::<Visible>(entity);
         }
     }

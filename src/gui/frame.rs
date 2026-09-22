@@ -13,11 +13,11 @@ use std::collections::{HashMap, HashSet};
 use glam::Vec2;
 
 use crate::context::WgpuContext;
-use crate::window::event::{Event, Key, MouseButton};
+use crate::window::event::{Cursor, Event, Key, MouseButton};
 
 use super::primitive::PrimitiveRenderer;
 use super::style::{Color, Style};
-use super::text::TextRenderer;
+use super::text::{TextRenderer, TextStyle};
 use super::types::{Id, Rect, Response, Sense};
 
 /// Number of paint layers.
@@ -64,6 +64,7 @@ pub struct Gui {
     tooltip: Option<(String, Vec2)>,
     wants_pointer: bool,
     wants_keyboard: bool,
+    cursor: Cursor,
 
     // ----- popups / modals -----
     popups: Vec<Rect>,
@@ -116,6 +117,7 @@ impl Gui {
             tooltip: None,
             wants_pointer: false,
             wants_keyboard: false,
+            cursor: Cursor::Default,
             popups: Vec::new(),
             popups_prev: Vec::new(),
             pointer_over_popup_prev: false,
@@ -255,6 +257,7 @@ impl Gui {
         self.wants_pointer = self.active.is_some();
         self.wants_keyboard = false;
         self.tooltip = None;
+        self.cursor = Cursor::Default;
         self.layer = LAYER_BASE;
         self.clip.clear();
 
@@ -279,6 +282,25 @@ impl Gui {
     /// Whether a text field has focus (suppress global shortcuts).
     pub fn wants_keyboard(&self) -> bool {
         self.wants_keyboard || self.focus.is_some()
+    }
+
+    /// The widget under the pointer so far this frame (the last one registered wins, so
+    /// a region registered *before* its children reads as hovered only when none of the
+    /// children is).
+    pub fn hovered(&self) -> Option<Id> {
+        self.hover
+    }
+
+    /// The cursor shape requested by widgets this frame (hand over buttons, I-beam over
+    /// fields, resize arrows over splitters). Hand it to `FrameOutput::cursor`.
+    pub fn cursor(&self) -> Cursor {
+        self.cursor
+    }
+
+    /// Request a cursor shape for this frame (widgets call it while hovered; the last
+    /// call wins, and a drag capture keeps its shape).
+    pub fn set_cursor(&mut self, cursor: Cursor) {
+        self.cursor = cursor;
     }
 
     /// Finish the frame (tooltips) and draw every layer onto `view`.
@@ -565,13 +587,13 @@ impl Gui {
         let _ = self.scalars.insert(id, value);
     }
 
-    /// Cursor state (text fields).
-    pub fn cursor(&self, id: Id) -> Option<usize> {
+    /// Caret state (text fields).
+    pub fn text_cursor(&self, id: Id) -> Option<usize> {
         self.cursors.get(&id).copied()
     }
 
-    /// Set cursor state.
-    pub fn set_cursor(&mut self, id: Id, value: usize) {
+    /// Set caret state.
+    pub fn set_text_cursor(&mut self, id: Id, value: usize) {
         let _ = self.cursors.insert(id, value);
     }
 
@@ -645,10 +667,39 @@ impl Gui {
         self.text.draw_text(text, pos.x, pos.y, size, color);
     }
 
+    /// Text at `pos` with explicit family / weight / letter spacing.
+    pub fn paint_text_styled(
+        &mut self,
+        text: &str,
+        pos: Vec2,
+        size: f32,
+        color: Color,
+        style: TextStyle,
+    ) {
+        self.text
+            .draw_text_styled(text, pos.x, pos.y, size, color, style);
+    }
+
     /// Text size in pixels.
     pub fn measure(&mut self, text: &str, size: f32) -> Vec2 {
         let (w, h) = self.text.measure(text, size);
         Vec2::new(w, h)
+    }
+
+    /// Text size in pixels with explicit family / weight / letter spacing.
+    pub fn measure_styled(&mut self, text: &str, size: f32, style: TextStyle) -> Vec2 {
+        let (w, h) = self.text.measure_styled(text, size, style);
+        Vec2::new(w, h)
+    }
+
+    /// A soft drop shadow under `rect` (a few translucent rings, no blur pass).
+    pub fn paint_shadow(&mut self, rect: Rect, offset: Vec2, spread: f32, alpha: f32) {
+        let steps = 4;
+        for i in 0..steps {
+            let t = (i + 1) as f32 / steps as f32;
+            let r = rect.translate(offset).expand(spread * (1.0 - t));
+            self.paint_rect(r, [0.0, 0.0, 0.0, alpha * t / steps as f32]);
+        }
     }
 
     /// Reserve a background rect on the current layer, to be filled with
@@ -685,8 +736,8 @@ impl Gui {
             pos.y = (at.y - size.y - 4.0).max(0.0);
         }
         let rect = Rect::from_min_size(pos, size);
-        self.paint_rect(rect, style.palette.popup);
-        self.paint_rect_outline(rect, 1.0, style.palette.line);
+        self.paint_rect(rect, style.palette.header);
+        self.paint_rect_outline(rect, 1.0, style.palette.line_hard);
         self.paint_text(
             &text,
             pos + Vec2::splat(style.padding),

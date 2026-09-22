@@ -3,7 +3,7 @@
 //! Run all:    cargo bench --manifest-path benchmarks/Cargo.toml --bench physics
 //! Filter:     cargo bench --manifest-path benchmarks/Cargo.toml --bench physics -- broadphase
 
-use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use glam::{Mat4, Vec3};
 use rein::ecs::components::physics::ColliderShape;
 use rein::ecs::components::transform::GlobalTransform;
@@ -168,8 +168,7 @@ fn bench_narrowphase(c: &mut Criterion) {
                     let x = (i as f32) * 3.0;
                     let shape = ColliderShape::Sphere { radius: 1.0 };
                     let ta = GlobalTransform(Mat4::from_translation(Vec3::new(x, 0.0, 0.0)));
-                    let tb =
-                        GlobalTransform(Mat4::from_translation(Vec3::new(x + 1.5, 0.0, 0.0)));
+                    let tb = GlobalTransform(Mat4::from_translation(Vec3::new(x + 1.5, 0.0, 0.0)));
                     (shape.clone(), ta, shape, tb)
                 })
                 .collect();
@@ -280,10 +279,7 @@ fn bench_pipeline(c: &mut Criterion) {
                     w
                 },
                 |mut w| {
-                    rein::physics::rigid_body::apply_gravity(
-                        &mut w,
-                        Vec3::new(0.0, -9.81, 0.0),
-                    );
+                    rein::physics::rigid_body::apply_gravity(&mut w, Vec3::new(0.0, -9.81, 0.0));
                     rein::physics::rigid_body::integrate_velocities(&mut w, 1.0 / 60.0);
                     rein::physics::rigid_body::integrate_positions(&mut w, 1.0 / 60.0);
                 },
@@ -408,7 +404,9 @@ fn bench_sleep_effect(c: &mut Criterion) {
 // ---------------------------------------------------------------------------
 
 fn bench_gpu_physics(c: &mut Criterion) {
-    use rein_bench::{create_headless_context, run_gpu_mass_physics, setup_gpu_mass_scene, setup_gpu_scene};
+    use rein_bench::{
+        create_headless_context, run_gpu_mass_physics, setup_gpu_mass_scene, setup_gpu_scene,
+    };
 
     let ctx = match create_headless_context() {
         Ok(ctx) => ctx,
@@ -424,33 +422,25 @@ fn bench_gpu_physics(c: &mut Criterion) {
         group.sample_size(20);
         for &n in &[100, 500, 1000] {
             // GPU step
-            group.bench_with_input(
-                BenchmarkId::new("gpu", n),
-                &n,
-                |b, &n| {
-                    b.iter_batched(
-                        || setup_gpu_scene(&ctx, n).expect("GPU scene setup"),
-                        |(mut world, mut physics)| {
-                            physics.step_gpu(&mut world, 1.0 / 60.0, &ctx);
-                        },
-                        criterion::BatchSize::LargeInput,
-                    );
-                },
-            );
+            group.bench_with_input(BenchmarkId::new("gpu", n), &n, |b, &n| {
+                b.iter_batched(
+                    || setup_gpu_scene(&ctx, n).expect("GPU scene setup"),
+                    |(mut world, mut physics)| {
+                        physics.step_gpu(&mut world, 1.0 / 60.0, &ctx);
+                    },
+                    criterion::BatchSize::LargeInput,
+                );
+            });
             // CPU step for comparison
-            group.bench_with_input(
-                BenchmarkId::new("cpu", n),
-                &n,
-                |b, &n| {
-                    b.iter_batched(
-                        || setup_scene(n),
-                        |(mut world, mut physics)| {
-                            physics.step(&mut world, 1.0 / 60.0);
-                        },
-                        criterion::BatchSize::LargeInput,
-                    );
-                },
-            );
+            group.bench_with_input(BenchmarkId::new("cpu", n), &n, |b, &n| {
+                b.iter_batched(
+                    || setup_scene(n),
+                    |(mut world, mut physics)| {
+                        physics.step(&mut world, 1.0 / 60.0);
+                    },
+                    criterion::BatchSize::LargeInput,
+                );
+            });
         }
         group.finish();
     }
@@ -461,19 +451,18 @@ fn bench_gpu_physics(c: &mut Criterion) {
         group.sample_size(20);
         for &n in &[256, 500, 1000, 2000] {
             let (world, physics) = setup_gpu_scene(&ctx, n).expect("GPU scene setup");
-            let gpu_physics = physics.gpu_physics_ref().expect("GPU physics not initialized");
+            let gpu_physics = physics
+                .gpu_physics_ref()
+                .expect("GPU physics not initialized");
 
-            group.bench_with_input(
-                BenchmarkId::from_parameter(n),
-                &n,
-                |b, _| {
-                    b.iter(|| {
-                        let (body_count, _entity_map, _max_extent) = gpu_physics.upload_aabbs(&ctx, &world);
-                        gpu_physics.dispatch_broadphase(&ctx, body_count);
-                        gpu_physics.readback_pairs(&ctx)
-                    });
-                },
-            );
+            group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, _| {
+                b.iter(|| {
+                    let (body_count, _entity_map, _max_extent) =
+                        gpu_physics.upload_aabbs(&ctx, &world);
+                    gpu_physics.dispatch_broadphase(&ctx, body_count);
+                    gpu_physics.readback_pairs(&ctx)
+                });
+            });
         }
         group.finish();
     }

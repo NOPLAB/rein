@@ -4,10 +4,10 @@
 //!
 //! Run with: cargo run
 
-use glam::{Mat4, Vec3};
+use glam::Vec3;
 use rein::{
-    AmbientLight, Camera, ClearState, DirectionalLight, FrameOutput, Gm, Light, Mesh, Object,
-    OrbitControl, PbrMaterial, Window, WindowSettings, screen_target,
+    screen_target, AmbientLight, Camera, ClearState, DirectionalLight, FrameOutput, Gm, Light,
+    Mesh, Object, OrbitControl, PbrMaterial, Window, WindowSettings,
 };
 
 fn main() -> anyhow::Result<()> {

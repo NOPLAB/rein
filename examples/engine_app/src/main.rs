@@ -10,7 +10,7 @@ use rein::ecs::components::rendering::{
     Visible,
 };
 use rein::ecs::components::transform::{GlobalTransform, Transform};
-use rein::engine::{App, GameLoopConfig, SystemContext, run_app};
+use rein::engine::{run_app, App, GameLoopConfig, SystemContext};
 use rein::renderer::light::LightType;
 use rein::{Camera, ColorMaterial, Mesh, WgpuContext, WindowSettings};
 
@@ -54,8 +54,8 @@ impl App for MyApp {
     fn update(&mut self, world: &mut hecs::World, ctx: &SystemContext) {
         // Spawn mesh on first update (surface_format is available here)
         if !self.mesh_spawned {
-            let material = ColorMaterial::new(ctx.ctx, ctx.surface_format)
-                .expect("Failed to create material");
+            let material =
+                ColorMaterial::new(ctx.ctx, ctx.surface_format).expect("Failed to create material");
             let mesh = Mesh::cube(ctx.ctx, 1.0, [0.8, 0.3, 0.2]);
 
             world.spawn((
@@ -75,7 +75,7 @@ impl App for MyApp {
         }
 
         // Update camera viewport
-        for (_, (cam,)) in world.query_mut::<(&mut CameraComponent,)>() {
+        for (cam,) in world.query_mut::<(&mut CameraComponent,)>() {
             if cam.active {
                 cam.camera.set_viewport(ctx.viewport);
             }

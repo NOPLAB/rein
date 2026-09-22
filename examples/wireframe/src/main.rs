@@ -6,16 +6,12 @@
 
 use glam::{Mat4, Vec3};
 use rein::{
-    Camera, ClearState, FrameOutput, Geometry, LineMaterial, LineStrip, Lines, OrbitControl, Window,
-    WindowSettings, screen_target,
+    screen_target, Camera, ClearState, FrameOutput, Geometry, LineMaterial, LineStrip, Lines,
+    OrbitControl, Window, WindowSettings,
 };
 
 fn main() -> anyhow::Result<()> {
-    let window = Window::new(
-        WindowSettings::default()
-            .title("Wireframe")
-            .size(1024, 768),
-    )?;
+    let window = Window::new(WindowSettings::default().title("Wireframe").size(1024, 768))?;
 
     struct State {
         camera: Camera,
@@ -56,20 +52,80 @@ fn main() -> anyhow::Result<()> {
             let s = 1.0f32;
             let edges: Vec<(Vec3, [f32; 4], Vec3, [f32; 4])> = vec![
                 // Bottom face (red)
-                (Vec3::new(-s, -s, -s), [1.0, 0.3, 0.3, 1.0], Vec3::new(s, -s, -s), [1.0, 0.3, 0.3, 1.0]),
-                (Vec3::new(s, -s, -s), [1.0, 0.3, 0.3, 1.0], Vec3::new(s, -s, s), [1.0, 0.3, 0.3, 1.0]),
-                (Vec3::new(s, -s, s), [1.0, 0.3, 0.3, 1.0], Vec3::new(-s, -s, s), [1.0, 0.3, 0.3, 1.0]),
-                (Vec3::new(-s, -s, s), [1.0, 0.3, 0.3, 1.0], Vec3::new(-s, -s, -s), [1.0, 0.3, 0.3, 1.0]),
+                (
+                    Vec3::new(-s, -s, -s),
+                    [1.0, 0.3, 0.3, 1.0],
+                    Vec3::new(s, -s, -s),
+                    [1.0, 0.3, 0.3, 1.0],
+                ),
+                (
+                    Vec3::new(s, -s, -s),
+                    [1.0, 0.3, 0.3, 1.0],
+                    Vec3::new(s, -s, s),
+                    [1.0, 0.3, 0.3, 1.0],
+                ),
+                (
+                    Vec3::new(s, -s, s),
+                    [1.0, 0.3, 0.3, 1.0],
+                    Vec3::new(-s, -s, s),
+                    [1.0, 0.3, 0.3, 1.0],
+                ),
+                (
+                    Vec3::new(-s, -s, s),
+                    [1.0, 0.3, 0.3, 1.0],
+                    Vec3::new(-s, -s, -s),
+                    [1.0, 0.3, 0.3, 1.0],
+                ),
                 // Top face (green)
-                (Vec3::new(-s, s, -s), [0.3, 1.0, 0.3, 1.0], Vec3::new(s, s, -s), [0.3, 1.0, 0.3, 1.0]),
-                (Vec3::new(s, s, -s), [0.3, 1.0, 0.3, 1.0], Vec3::new(s, s, s), [0.3, 1.0, 0.3, 1.0]),
-                (Vec3::new(s, s, s), [0.3, 1.0, 0.3, 1.0], Vec3::new(-s, s, s), [0.3, 1.0, 0.3, 1.0]),
-                (Vec3::new(-s, s, s), [0.3, 1.0, 0.3, 1.0], Vec3::new(-s, s, -s), [0.3, 1.0, 0.3, 1.0]),
+                (
+                    Vec3::new(-s, s, -s),
+                    [0.3, 1.0, 0.3, 1.0],
+                    Vec3::new(s, s, -s),
+                    [0.3, 1.0, 0.3, 1.0],
+                ),
+                (
+                    Vec3::new(s, s, -s),
+                    [0.3, 1.0, 0.3, 1.0],
+                    Vec3::new(s, s, s),
+                    [0.3, 1.0, 0.3, 1.0],
+                ),
+                (
+                    Vec3::new(s, s, s),
+                    [0.3, 1.0, 0.3, 1.0],
+                    Vec3::new(-s, s, s),
+                    [0.3, 1.0, 0.3, 1.0],
+                ),
+                (
+                    Vec3::new(-s, s, s),
+                    [0.3, 1.0, 0.3, 1.0],
+                    Vec3::new(-s, s, -s),
+                    [0.3, 1.0, 0.3, 1.0],
+                ),
                 // Vertical edges (blue)
-                (Vec3::new(-s, -s, -s), [0.3, 0.3, 1.0, 1.0], Vec3::new(-s, s, -s), [0.3, 0.3, 1.0, 1.0]),
-                (Vec3::new(s, -s, -s), [0.3, 0.3, 1.0, 1.0], Vec3::new(s, s, -s), [0.3, 0.3, 1.0, 1.0]),
-                (Vec3::new(s, -s, s), [0.3, 0.3, 1.0, 1.0], Vec3::new(s, s, s), [0.3, 0.3, 1.0, 1.0]),
-                (Vec3::new(-s, -s, s), [0.3, 0.3, 1.0, 1.0], Vec3::new(-s, s, s), [0.3, 0.3, 1.0, 1.0]),
+                (
+                    Vec3::new(-s, -s, -s),
+                    [0.3, 0.3, 1.0, 1.0],
+                    Vec3::new(-s, s, -s),
+                    [0.3, 0.3, 1.0, 1.0],
+                ),
+                (
+                    Vec3::new(s, -s, -s),
+                    [0.3, 0.3, 1.0, 1.0],
+                    Vec3::new(s, s, -s),
+                    [0.3, 0.3, 1.0, 1.0],
+                ),
+                (
+                    Vec3::new(s, -s, s),
+                    [0.3, 0.3, 1.0, 1.0],
+                    Vec3::new(s, s, s),
+                    [0.3, 0.3, 1.0, 1.0],
+                ),
+                (
+                    Vec3::new(-s, -s, s),
+                    [0.3, 0.3, 1.0, 1.0],
+                    Vec3::new(-s, s, s),
+                    [0.3, 0.3, 1.0, 1.0],
+                ),
             ];
             state.cube_lines = Some(Lines::new(frame.ctx, &edges, Some("wireframe cube")));
 

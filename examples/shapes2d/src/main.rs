@@ -4,14 +4,10 @@
 //!
 //! Run with: cargo run
 
-use rein::{ClearState, FrameOutput, Window, WindowSettings, screen_target};
+use rein::{screen_target, ClearState, FrameOutput, Window, WindowSettings};
 
 fn main() -> anyhow::Result<()> {
-    let window = Window::new(
-        WindowSettings::default()
-            .title("2D Shapes")
-            .size(800, 600),
-    )?;
+    let window = Window::new(WindowSettings::default().title("2D Shapes").size(800, 600))?;
 
     struct State {
         renderer: Option<rein::gui::PrimitiveRenderer>,

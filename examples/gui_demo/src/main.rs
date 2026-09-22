@@ -271,7 +271,15 @@ fn main() -> anyhow::Result<()> {
 }
 
 /// A frame-time line graph drawn with a single polyline (auto-scaled).
-fn line_graph(ui: &mut UiContext, x: f32, y: f32, w: f32, h: f32, samples: &[f32], color: [f32; 4]) {
+fn line_graph(
+    ui: &mut UiContext,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+    samples: &[f32],
+    color: [f32; 4],
+) {
     ui.rect(x, y, w, h, [0.08, 0.08, 0.10, 0.9]);
     if samples.len() < 2 {
         return;

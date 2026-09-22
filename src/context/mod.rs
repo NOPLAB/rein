@@ -26,16 +26,15 @@ impl WgpuContext {
 
     /// Create a new context asynchronously with default settings.
     pub async fn new_async(compatible_surface: Option<&wgpu::Surface<'_>>) -> anyhow::Result<Self> {
-        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::all(),
-            ..Default::default()
-        });
+        let instance =
+            wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
 
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
                 compatible_surface,
                 force_fallback_adapter: false,
+                apply_limit_buckets: false,
             })
             .await?;
 

@@ -3,6 +3,7 @@
 //! Provides material types for controlling surface appearance.
 
 mod color;
+mod common;
 mod depth;
 mod grid;
 mod line;

@@ -474,26 +474,20 @@ pub fn sat_box_box(
     // A's face normals
     for i in 0..3 {
         let axis = axes_a[i];
-        if let Some(overlap) = sat_test_axis(axis, &axes_a, &half_a_arr, &axes_b, &half_b_arr, t) {
-            if overlap < min_overlap {
-                min_overlap = overlap;
-                best_axis = axis;
-            }
-        } else {
-            return None;
+        let overlap = sat_test_axis(axis, &axes_a, &half_a_arr, &axes_b, &half_b_arr, t)?;
+        if overlap < min_overlap {
+            min_overlap = overlap;
+            best_axis = axis;
         }
     }
 
     // B's face normals
     for i in 0..3 {
         let axis = axes_b[i];
-        if let Some(overlap) = sat_test_axis(axis, &axes_a, &half_a_arr, &axes_b, &half_b_arr, t) {
-            if overlap < min_overlap {
-                min_overlap = overlap;
-                best_axis = axis;
-            }
-        } else {
-            return None;
+        let overlap = sat_test_axis(axis, &axes_a, &half_a_arr, &axes_b, &half_b_arr, t)?;
+        if overlap < min_overlap {
+            min_overlap = overlap;
+            best_axis = axis;
         }
     }
 
@@ -506,15 +500,10 @@ pub fn sat_box_box(
                 continue; // Parallel edges
             }
             let axis = axis / len;
-            if let Some(overlap) =
-                sat_test_axis(axis, &axes_a, &half_a_arr, &axes_b, &half_b_arr, t)
-            {
-                if overlap < min_overlap {
-                    min_overlap = overlap;
-                    best_axis = axis;
-                }
-            } else {
-                return None;
+            let overlap = sat_test_axis(axis, &axes_a, &half_a_arr, &axes_b, &half_b_arr, t)?;
+            if overlap < min_overlap {
+                min_overlap = overlap;
+                best_axis = axis;
             }
         }
     }
@@ -535,7 +524,7 @@ pub fn sat_box_box(
     // Contact depth along the axis: midpoint between the two closest faces
     let face_a = center_a.dot(best_axis) + proj_a_on_axis;
     let face_b = center_b.dot(best_axis) - proj_b_on_axis;
-    let contact_d = (face_a + face_b) * 0.5;
+    let contact_d = f32::midpoint(face_a, face_b);
 
     // Use the smaller body's center for lateral (non-axis) position,
     // then project onto the contact plane along the axis

@@ -6,16 +6,12 @@
 
 use glam::{Mat4, Vec3};
 use rein::{
-    Camera, ClearState, FrameOutput, Gm, Object, OrbitControl, SpriteMaterial, Sprites, Window,
-    WindowSettings, screen_target,
+    screen_target, Camera, ClearState, FrameOutput, Gm, Object, OrbitControl, SpriteMaterial,
+    Sprites, Window, WindowSettings,
 };
 
 fn main() -> anyhow::Result<()> {
-    let window = Window::new(
-        WindowSettings::default()
-            .title("Sprites")
-            .size(1024, 768),
-    )?;
+    let window = Window::new(WindowSettings::default().title("Sprites").size(1024, 768))?;
 
     struct State {
         camera: Camera,

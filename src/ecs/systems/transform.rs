@@ -10,9 +10,9 @@ pub fn transform_system(world: &mut hecs::World) {
     // Phase 1: Root entities (entities with Transform + GlobalTransform but no Parent).
     // Collect root entities and their matrices first to avoid borrow conflicts.
     let roots: Vec<(hecs::Entity, glam::Mat4)> = world
-        .query_mut::<hecs::Without<(&Transform, &GlobalTransform), &Parent>>()
+        .query_mut::<hecs::Without<(hecs::Entity, &Transform, &GlobalTransform), &Parent>>()
         .into_iter()
-        .map(|(entity, (transform, _))| (entity, transform.to_matrix()))
+        .map(|(entity, transform, _)| (entity, transform.to_matrix()))
         .collect();
 
     for (entity, matrix) in &roots {
@@ -25,7 +25,7 @@ pub fn transform_system(world: &mut hecs::World) {
     // Collect root entities that have children to start traversal.
     let root_with_children: Vec<(hecs::Entity, glam::Mat4)> = roots
         .iter()
-        .filter(|(entity, _)| world.satisfies::<&Children>(*entity).unwrap_or(false))
+        .filter(|(entity, _)| world.satisfies::<&Children>(*entity))
         .copied()
         .collect();
 
@@ -55,7 +55,7 @@ fn propagate_children(world: &mut hecs::World, parent: hecs::Entity, parent_glob
         }
 
         // Recurse into grandchildren.
-        if world.satisfies::<&Children>(child).unwrap_or(false) {
+        if world.satisfies::<&Children>(child) {
             propagate_children(world, child, child_global);
         }
     }

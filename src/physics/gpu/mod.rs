@@ -24,6 +24,11 @@ use crate::core::{ComputePipelineBuilder, StorageBuffer};
 use crate::ecs::components::physics::{Collider, ColliderShape, RigidBody, RigidBodyType};
 use crate::ecs::components::transform::GlobalTransform;
 
+mod types;
+
+use types::{BroadphaseParams, IntegrateParams};
+pub use types::{CollisionPair, GpuAabb, GpuBody, GpuShapeData, NarrowphaseResult};
+
 /// Minimum number of bodies before GPU offload is used.
 pub const GPU_BODY_THRESHOLD: usize = 256;
 
@@ -32,99 +37,6 @@ pub const MAX_PAIRS: u32 = 65536;
 
 /// Workgroup size matching the WGSL shaders.
 const WORKGROUP_SIZE: u32 = 64;
-
-/// GPU AABB data layout matching the broadphase shader.
-#[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct GpuAabb {
-    pub min: [f32; 3],
-    pub entity_id: u32,
-    pub max: [f32; 3],
-    pub padding: u32,
-}
-
-/// GPU collision pair output.
-#[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct CollisionPair {
-    pub entity_a: u32,
-    pub entity_b: u32,
-}
-
-/// GPU body data layout matching the integrate shader.
-#[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct GpuBody {
-    pub position: [f32; 3],
-    pub body_type: u32,
-    pub linear_velocity: [f32; 3],
-    pub mass: f32,
-    pub angular_velocity: [f32; 3],
-    pub gravity_scale: f32,
-    pub force_accumulator: [f32; 3],
-    pub linear_damping: f32,
-    pub torque_accumulator: [f32; 3],
-    pub angular_damping: f32,
-    pub inertia_diag: [f32; 3],
-    pub padding: f32,
-    pub rotation: [f32; 4],
-}
-
-/// GPU broadphase parameters.
-#[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-struct BroadphaseParams {
-    num_bodies: u32,
-    max_pairs: u32,
-    /// Cell size as f32 bits (bitcast<f32> in shader).
-    cell_size_bits: u32,
-    _pad0: u32,
-}
-
-/// GPU shape data for narrowphase.
-#[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct GpuShapeData {
-    pub position: [f32; 3],
-    pub shape_type: u32, // 0=sphere, 1=box
-    pub data: [f32; 4],  // sphere: [radius,0,0,0], box: [hx,hy,hz,0]
-    pub axis_x: [f32; 3],
-    pub scale_x: f32,
-    pub axis_y: [f32; 3],
-    pub scale_y: f32,
-    pub axis_z: [f32; 3],
-    pub scale_z: f32,
-}
-
-/// GPU narrowphase result.
-///
-/// Layout must match WGSL struct with vec3<f32> alignment (16 bytes).
-#[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct NarrowphaseResult {
-    pub entity_a: u32,
-    pub entity_b: u32,
-    pub pad0: u32,
-    pub pad1: u32,
-    pub normal: [f32; 3],
-    pub penetration: f32,
-    pub point: [f32; 3],
-    pub has_contact: u32,
-}
-
-/// GPU integrate parameters.
-#[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-struct IntegrateParams {
-    num_bodies: u32,
-    dt: f32,
-    gravity_x: f32,
-    gravity_y: f32,
-    gravity_z: f32,
-    _pad0: f32,
-    _pad1: f32,
-    _pad2: f32,
-}
 
 /// GPU-accelerated physics engine.
 ///
@@ -449,8 +361,8 @@ impl GpuPhysics {
         let mut entity_map = Vec::new();
         let mut max_extent: f32 = 0.0;
 
-        for (entity, (collider, transform, rb)) in
-            &mut world.query::<(&Collider, &GlobalTransform, &RigidBody)>()
+        for (entity, collider, transform, rb) in
+            &mut world.query::<(hecs::Entity, &Collider, &GlobalTransform, &RigidBody)>()
         {
             if collider.is_sensor {
                 continue;
@@ -880,9 +792,11 @@ impl GpuPhysics {
         let mut bodies = Vec::new();
         let mut entity_map = Vec::new();
 
-        for (entity, (rb, transform)) in
-            &mut world.query::<(&RigidBody, &crate::ecs::components::transform::Transform)>()
-        {
+        for (entity, rb, transform) in &mut world.query::<(
+            hecs::Entity,
+            &RigidBody,
+            &crate::ecs::components::transform::Transform,
+        )>() {
             let body_type = match rb.body_type {
                 RigidBodyType::Dynamic => 0_u32,
                 RigidBodyType::Static => 1,

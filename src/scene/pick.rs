@@ -94,7 +94,7 @@ impl Ray {
     /// Nearest triangle hit in a mesh (local space). Returns the ray parameter.
     pub fn hit_mesh(&self, mesh: &MeshData) -> Option<f32> {
         let mut best: Option<f32> = None;
-        for tri in mesh.indices.chunks_exact(3) {
+        for tri in mesh.indices.as_chunks::<3>().0 {
             let (a, b, c) = (
                 mesh.positions[tri[0] as usize],
                 mesh.positions[tri[1] as usize],

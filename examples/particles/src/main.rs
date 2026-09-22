@@ -6,8 +6,8 @@
 
 use glam::{Mat4, Vec3};
 use rein::{
-    Camera, ClearState, FrameOutput, Gm, Object, OrbitControl, ParticleData, ParticleSystem,
-    SpriteMaterial, Window, WindowSettings, screen_target,
+    screen_target, Camera, ClearState, FrameOutput, Gm, Object, OrbitControl, ParticleData,
+    ParticleSystem, SpriteMaterial, Window, WindowSettings,
 };
 
 fn main() -> anyhow::Result<()> {
@@ -63,11 +63,7 @@ fn main() -> anyhow::Result<()> {
                     2.0 + (t * 7.0).sin() * 1.0,
                     angle.sin() * spread + (t * 17.0).cos() * 0.3,
                 ));
-                colors.push([
-                    1.0,
-                    0.3 + t * 0.5,
-                    0.1,
-                ]);
+                colors.push([1.0, 0.3 + t * 0.5, 0.1]);
             }
 
             let data = ParticleData {

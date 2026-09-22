@@ -28,6 +28,12 @@ rein = { git = "https://github.com/NOPLAB/rein" }
 |----------|---------|-------------|
 | `window` | Yes     | Window management with winit |
 | `gui`    | No      | Text rendering with glyphon |
+| `compute` | No     | GPU compute dispatch and readback utilities |
+| `ecs` | No | hecs components and rendering systems |
+| `physics` | No | CPU rigid-body simulation; enables `ecs` |
+| `gpu-physics` | No | GPU-assisted physics; enables `physics` |
+| `engine` | No | ECS game loop; enables `ecs` and `window` |
+| `full` | No | Engine, physics, GPU physics, and GUI |
 
 ## Architecture
 
@@ -39,6 +45,21 @@ The library is organized into layers:
 4. **window** - Window management with winit (optional)
 5. **gui** - Text rendering (optional)
 6. **urdf** - URDF robot model support
+
+Compute, ECS, physics, and the application loop are optional higher-level layers. Rein also
+provides two rendering styles: `renderer` for material-driven objects and `scene` for retained,
+telemetry-oriented scenes. See [Architecture](docs/architecture.md) for the dependency boundaries
+and guidance on choosing between them.
+
+## Examples
+
+Examples and benchmarks are members of the repository workspace and share the root lockfile:
+
+```bash
+cargo run -p hello_cube
+cargo run -p physics_demo
+cargo check --workspace
+```
 
 ## Example
 

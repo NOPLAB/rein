@@ -6,8 +6,8 @@
 
 use glam::{Mat4, Vec3};
 use rein::{
-    Camera, ClearState, FrameOutput, Gm, Mesh, Object, OrbitControl, UVMaterial, Window,
-    WindowSettings, screen_target,
+    screen_target, Camera, ClearState, FrameOutput, Gm, Mesh, Object, OrbitControl, UVMaterial,
+    Window, WindowSettings,
 };
 
 fn main() -> anyhow::Result<()> {

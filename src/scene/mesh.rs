@@ -87,7 +87,7 @@ impl MeshData {
     /// Replace the normals with area-weighted face normals accumulated per vertex.
     pub fn recompute_normals(&mut self) {
         let mut acc = vec![Vec3::ZERO; self.positions.len()];
-        for tri in self.indices.chunks_exact(3) {
+        for tri in self.indices.as_chunks::<3>().0 {
             let (a, b, c) = (tri[0] as usize, tri[1] as usize, tri[2] as usize);
             let n = (self.positions[b] - self.positions[a])
                 .cross(self.positions[c] - self.positions[a]);

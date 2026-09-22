@@ -178,6 +178,57 @@ impl Key {
     }
 }
 
+/// Mouse cursor shape (a subset of the CSS cursor names).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum Cursor {
+    /// Arrow.
+    #[default]
+    Default,
+    /// Hand (clickable).
+    Pointer,
+    /// I-beam.
+    Text,
+    /// Crosshair.
+    Crosshair,
+    /// Four-way move.
+    Move,
+    /// Open hand.
+    Grab,
+    /// Closed hand.
+    Grabbing,
+    /// Not allowed.
+    NotAllowed,
+    /// Horizontal resize.
+    EwResize,
+    /// Vertical resize.
+    NsResize,
+    /// Diagonal resize (north-east / south-west).
+    NeswResize,
+    /// Diagonal resize (north-west / south-east).
+    NwseResize,
+}
+
+impl Cursor {
+    /// The winit cursor icon.
+    pub fn to_winit(self) -> winit::window::CursorIcon {
+        use winit::window::CursorIcon as C;
+        match self {
+            Self::Default => C::Default,
+            Self::Pointer => C::Pointer,
+            Self::Text => C::Text,
+            Self::Crosshair => C::Crosshair,
+            Self::Move => C::Move,
+            Self::Grab => C::Grab,
+            Self::Grabbing => C::Grabbing,
+            Self::NotAllowed => C::NotAllowed,
+            Self::EwResize => C::EwResize,
+            Self::NsResize => C::NsResize,
+            Self::NeswResize => C::NeswResize,
+            Self::NwseResize => C::NwseResize,
+        }
+    }
+}
+
 /// Modifier key state.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Modifiers {

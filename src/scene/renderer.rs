@@ -654,7 +654,7 @@ impl SceneRenderer {
                     l.pixel_size
                 };
                 Some(ScreenLabel {
-                    x: ox + (ndc.x + 1.0) * 0.5 * width,
+                    x: ox + f32::midpoint(ndc.x, 1.0) * width,
                     y: oy + (1.0 - ndc.y) * 0.5 * height,
                     size,
                     text: l.text.clone(),

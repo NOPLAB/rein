@@ -34,8 +34,8 @@ mod widgets;
 mod tests;
 
 pub use primitive::PrimitiveRenderer;
-pub use style::{Color, Palette, Style};
-pub use text::{TextBuilder, TextRenderer};
+pub use style::{linear_to_srgb, over, srgb, srgb_to_linear, with_alpha, Color, Palette, Style};
+pub use text::{TextBuilder, TextRenderer, TextStyle};
 
 #[cfg(feature = "window")]
 pub use builder::Ui;
@@ -54,4 +54,4 @@ pub use types::{Align, Dir, Id, Rect, Response, Sense};
 #[cfg(feature = "window")]
 pub use ui::UiContext;
 #[cfg(feature = "window")]
-pub use widgets::{ButtonKind, Range, TextResponse};
+pub use widgets::{ButtonKind, ButtonStyle, Range, TextResponse};

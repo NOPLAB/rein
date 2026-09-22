@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to coding agents working in this repository.
 
 ## Project Overview
 
@@ -26,16 +26,17 @@ cargo clippy --all-features        # Linting
 cargo fmt                          # Format code
 ```
 
-Examples are separate crates in `examples/`:
+Examples are workspace members in `examples/`:
 ```bash
-cd examples/hello_cube && cargo run        # Run an example
-cd examples/physics_demo && cargo run      # Physics example
+cargo run -p hello_cube                    # Run an example
+cargo run -p physics_demo                  # Physics example
+cargo check --workspace                    # Check all examples and benchmarks
 ```
 
 Benchmarks are in `benchmarks/`:
 ```bash
-cd benchmarks && cargo bench --bench physics       # Criterion benchmarks
-cd benchmarks && cargo bench --bench physics_iai   # IAI-Callgrind benchmarks
+cargo bench -p rein-bench --bench physics       # Criterion benchmarks
+cargo bench -p rein-bench --bench physics_iai   # IAI-Callgrind benchmarks
 ```
 
 ## Architecture
@@ -141,9 +142,9 @@ Collider shapes: `Sphere`, `Box`, `Capsule`, `Cylinder`, `ConvexHull` - each wit
 
 ## Dependencies
 
-- `wgpu` 28 - GPU backend
-- `glam` 0.31 - Math (Vec3, Mat4, Quat, etc.)
-- `hecs` 0.10 - ECS (optional)
+- `wgpu` 30 - GPU backend
+- `glam` 0.33 - Math (Vec3, Mat4, Quat, etc.)
+- `hecs` 0.11 - ECS (optional)
 - `urdf-rs` 0.9 - URDF parsing
 - `winit` 0.30 - Window management (optional)
-- `glyphon` 0.10 - Text rendering (optional)
+- `glyphon` 0.12 - Text rendering (optional)

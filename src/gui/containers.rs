@@ -3,9 +3,12 @@
 
 use glam::Vec2;
 
+use crate::window::event::Cursor;
+
 use super::builder::Ui;
 use super::frame::{Gui, LAYER_POPUP};
-use super::style::{over, Color};
+use super::style::Color;
+use super::text::TextStyle;
 use super::types::{Dir, Id, Rect, Response, Sense};
 
 /// Result of a tree node.
@@ -58,13 +61,12 @@ impl Ui<'_> {
         // The thumb.
         if max_scroll > 0.0 {
             let track = Rect::new(area.max.x - bar_w, area.min.y, bar_w, area.height());
-            self.gui().paint_rect(track, style.palette.panel_alt);
             let thumb_h = (area.height() * area.height() / content_h).clamp(16.0, area.height());
             let thumb_id = id.with("thumb");
             let mut thumb = Rect::new(
-                track.min.x + 1.0,
+                track.min.x + 2.0,
                 track.min.y + (scroll / max_scroll).clamp(0.0, 1.0) * (track.height() - thumb_h),
-                bar_w - 2.0,
+                bar_w - 4.0,
                 thumb_h,
             );
             let t = self.interact(thumb_id, thumb, Sense::DRAG);
@@ -75,7 +77,7 @@ impl Ui<'_> {
                 thumb.max.y = thumb.min.y + thumb_h;
             }
             let c = if t.dragged || t.hovered {
-                style.palette.text_dim
+                style.palette.text_faint
             } else {
                 style.palette.line
             };
@@ -86,7 +88,8 @@ impl Ui<'_> {
         result
     }
 
-    /// A collapsible section with a header row. Returns whether it is open.
+    /// A collapsible section with a heading row (chevron + small-caps title over a
+    /// rule). Returns whether it is open.
     pub fn collapsing(
         &mut self,
         text: &str,
@@ -107,25 +110,31 @@ impl Ui<'_> {
             open = !open;
         }
         self.gui().set_scalar(id, if open { 1.0 } else { -1.0 });
+        let p = style.palette;
         if r.hovered {
-            self.gui()
-                .paint_rect(row, over(style.palette.hover, [0.0; 4]));
+            self.gui().paint_rect(row, p.row_hover);
+            self.gui().set_cursor(Cursor::Pointer);
         }
+        let rule = Rect::new(row.min.x, row.max.y - 1.0, row.width(), 1.0);
+        self.gui().paint_rect(rule, p.line);
         paint_chevron(
             self.gui(),
-            Vec2::new(row.min.x + 8.0, row.center().y),
+            Vec2::new(row.min.x + 6.0, row.center().y - 0.5),
             open,
-            style.palette.text_dim,
+            p.text_faint,
         );
-        let measured = self.gui().measure(text, style.font_size);
-        self.gui().paint_text(
+        let ts = TextStyle::SEMIBOLD.spaced(0.06);
+        let measured = self.gui().measure_styled(text, style.font_size_heading, ts);
+        self.gui().paint_text_styled(
             text,
-            Vec2::new(row.min.x + 18.0, row.center().y - measured.y * 0.5),
-            style.font_size,
-            style.palette.text,
+            Vec2::new(row.min.x + 15.0, row.center().y - 0.5 - measured.y * 0.5),
+            style.font_size_heading,
+            p.text_faint,
+            ts,
         );
+        self.add_space(3.0);
         if open {
-            self.indented(style.indent, add);
+            add(self);
         }
         open
     }
@@ -143,9 +152,9 @@ impl Ui<'_> {
         let _ = self.allocate(Vec2::new(used.x + indent, used.y));
     }
 
-    /// A panel background with padding around `add`.
+    /// A sunken panel with padding around `add`.
     pub fn frame<R>(&mut self, add: impl FnOnce(&mut Ui<'_>) -> R) -> R {
-        let bg = self.style().palette.panel_alt;
+        let bg = self.style().palette.sunken;
         self.frame_colored(bg, add)
     }
 
@@ -173,7 +182,8 @@ impl Ui<'_> {
         result
     }
 
-    /// A tree node with a chevron (unless `leaf`) and a selectable label row.
+    /// A tree node: a caret column, a selectable label row (accent tint + 1 px accent
+    /// outline when selected), children indented below when open. Open by default.
     pub fn tree_node(
         &mut self,
         id_source: impl core::hash::Hash,
@@ -182,41 +192,76 @@ impl Ui<'_> {
         leaf: bool,
         add: impl FnOnce(&mut Ui<'_>),
     ) -> TreeResponse {
+        self.tree_node_with(id_source, text, selected, leaf, true, add)
+    }
+
+    /// [`Self::tree_node`] with an explicit initial state (a deep tree usually opens only
+    /// its root).
+    pub fn tree_node_with(
+        &mut self,
+        id_source: impl core::hash::Hash,
+        text: &str,
+        selected: bool,
+        leaf: bool,
+        default_open: bool,
+        add: impl FnOnce(&mut Ui<'_>),
+    ) -> TreeResponse {
         let style = self.style().clone();
         let id = self.make_id(("tree", id_source));
         let stored = self.gui().scalar(id);
-        let mut open = !leaf && stored >= 0.0;
-        let row = self.allocate_row(style.row_height - 4.0);
-        let chevron = Rect::new(row.min.x, row.min.y, 16.0, row.height());
-        let label_rect = Rect::from_min_max(Vec2::new(row.min.x + 16.0, row.min.y), row.max);
+        let mut open = !leaf
+            && if stored == 0.0 {
+                default_open
+            } else {
+                stored > 0.0
+            };
+        let row = self.allocate_row(style.row_height);
+        let caret_w = 14.0;
+        let chevron = Rect::new(row.min.x, row.min.y, caret_w, row.height());
+        let label_rect = Rect::from_min_max(Vec2::new(row.min.x + caret_w, row.min.y), row.max);
         let c = self.interact(id.with("chevron"), chevron, Sense::CLICK);
         let r = self.interact(id, label_rect, Sense::CLICK);
         if !leaf && (c.clicked || r.double_clicked) {
             open = !open;
         }
         self.gui().set_scalar(id, if open { 1.0 } else { -1.0 });
-        let p = &style.palette;
+        let p = style.palette;
         if selected {
-            self.gui().paint_rect(row, over(p.accent, p.panel));
-        } else if r.hovered {
-            self.gui().paint_rect(row, over(p.hover, [0.0; 4]));
+            self.gui().paint_rect(row, p.accent_bg);
+            self.gui().paint_rect_outline(row, 1.0, p.accent);
+        } else if r.hovered || c.hovered {
+            self.gui().paint_rect(row, p.row_hover);
         }
         if !leaf {
-            paint_chevron(
-                self.gui(),
-                Vec2::new(chevron.min.x + 8.0, chevron.center().y),
-                open,
-                p.text_dim,
+            let glyph = if open { "▾" } else { "▸" };
+            let m = self.gui().measure(glyph, 9.0);
+            self.gui().paint_text(
+                glyph,
+                Vec2::new(
+                    chevron.min.x + (caret_w - m.x) * 0.5,
+                    chevron.center().y - m.y * 0.5,
+                ),
+                9.0,
+                p.text_faint,
             );
+            if c.hovered {
+                self.gui().set_cursor(Cursor::Pointer);
+            }
         }
         let measured = self.gui().measure(text, style.font_size);
-        let fg = if selected { p.text_on_accent } else { p.text };
+        let fg = if self.enabled() {
+            p.text
+        } else {
+            p.text_disabled
+        };
+        self.gui().push_clip(label_rect);
         self.gui().paint_text(
             text,
-            Vec2::new(label_rect.min.x + 2.0, row.center().y - measured.y * 0.5),
+            Vec2::new(label_rect.min.x, row.center().y - measured.y * 0.5),
             style.font_size,
             fg,
         );
+        self.gui().pop_clip();
         if open {
             self.indented(style.indent, add);
         }
@@ -224,7 +269,8 @@ impl Ui<'_> {
     }
 
     /// A table: `weights` are relative column widths, `header` the column titles,
-    /// `rows` the row count, and `cell` draws one cell.
+    /// `rows` the row count, and `cell` draws one cell. Rows are separated by grid rules
+    /// and highlight on hover.
     pub fn table(
         &mut self,
         weights: &[f32],
@@ -236,7 +282,7 @@ impl Ui<'_> {
         let total = weights.iter().sum::<f32>().max(1e-6);
         let width = self.available_width();
         let widths: Vec<f32> = weights.iter().map(|w| width * w / total).collect();
-        let row_h = style.row_height - 2.0;
+        let row_h = style.row_height;
         let xs: Vec<f32> = widths
             .iter()
             .scan(self.cursor().x, |x, w| {
@@ -245,9 +291,15 @@ impl Ui<'_> {
                 Some(start)
             })
             .collect();
+        let p = style.palette;
+        let gap = self.gap();
+        self.set_gap(0.0);
         if !header.is_empty() {
             let row = self.allocate_row(row_h);
-            self.gui().paint_rect(row, style.palette.panel_alt);
+            self.gui().paint_rect(
+                Rect::new(row.min.x, row.max.y - 1.0, row.width(), 1.0),
+                p.line,
+            );
             for (i, h) in header.iter().enumerate() {
                 let x = xs.get(i).copied().unwrap_or(row.min.x);
                 let measured = self.gui().measure(h, style.font_size_small);
@@ -255,16 +307,22 @@ impl Ui<'_> {
                     h,
                     Vec2::new(x + 4.0, row.center().y - measured.y * 0.5),
                     style.font_size_small,
-                    style.palette.text_dim,
+                    p.text_faint,
                 );
             }
         }
         for r in 0..rows {
             let row = self.allocate_row(row_h);
-            if r % 2 == 1 {
-                self.gui()
-                    .paint_rect(row, over([1.0, 1.0, 1.0, 0.025], [0.0; 4]));
+            let hovered = self
+                .interact(self.make_id(("row", r)), row, Sense::HOVER)
+                .hovered;
+            if hovered {
+                self.gui().paint_rect(row, p.row_hover);
             }
+            self.gui().paint_rect(
+                Rect::new(row.min.x, row.max.y - 1.0, row.width(), 1.0),
+                p.line_grid,
+            );
             for (c, w) in widths.iter().enumerate() {
                 let rect = Rect::new(xs[c] + 4.0, row.min.y, (w - 8.0).max(0.0), row.height());
                 let id = self.make_id(("cell", r, c));
@@ -276,6 +334,7 @@ impl Ui<'_> {
                 cu.gui().pop_clip();
             }
         }
+        self.set_gap(gap);
     }
 }
 
@@ -296,11 +355,12 @@ pub fn modal<R>(
     gui.set_layer(LAYER_POPUP);
     gui.paint_rect(Rect::from_min_size(Vec2::ZERO, win), style.palette.dim);
     let size = size.min(win - Vec2::splat(16.0));
-    let rect = Rect::from_min_size((win - size) * 0.5, size);
+    let rect = Rect::from_min_size(((win - size) * 0.5).round(), size);
     gui.register_popup(rect);
+    gui.paint_shadow(rect, Vec2::new(0.0, 10.0), 28.0, 0.45);
     gui.paint_rect(rect, style.palette.popup);
-    gui.paint_rect_outline(rect, 1.0, style.palette.line);
-    let inner = rect.shrink(style.padding * 2.0);
+    gui.paint_rect_outline(rect, 1.0, style.palette.line_hard);
+    let inner = rect.shrink2(Vec2::new(12.0, 10.0));
     let result = {
         let mut ui = Ui::new(gui, id.with("modal"), inner);
         gui_clip(&mut ui, inner, add)
@@ -316,31 +376,31 @@ fn gui_clip<R>(ui: &mut Ui<'_>, rect: Rect, add: impl FnOnce(&mut Ui<'_>) -> R) 
     r
 }
 
-/// A small right- or down-pointing chevron centred at `c`.
+/// A small right- or down-pointing chevron centred at `c` (11 px box, 1.5 px stroke).
 pub fn paint_chevron(gui: &mut Gui, c: Vec2, open: bool, color: Color) {
     if open {
         gui.paint_line(
-            c + Vec2::new(-4.0, -2.0),
+            c + Vec2::new(-3.5, -1.5),
             c + Vec2::new(0.0, 2.0),
             1.5,
             color,
         );
         gui.paint_line(
             c + Vec2::new(0.0, 2.0),
-            c + Vec2::new(4.0, -2.0),
+            c + Vec2::new(3.5, -1.5),
             1.5,
             color,
         );
     } else {
         gui.paint_line(
-            c + Vec2::new(-2.0, -4.0),
+            c + Vec2::new(-1.5, -3.5),
             c + Vec2::new(2.0, 0.0),
             1.5,
             color,
         );
         gui.paint_line(
             c + Vec2::new(2.0, 0.0),
-            c + Vec2::new(-2.0, 4.0),
+            c + Vec2::new(-1.5, 3.5),
             1.5,
             color,
         );

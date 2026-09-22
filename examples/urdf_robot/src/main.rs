@@ -6,8 +6,8 @@
 
 use glam::Vec3;
 use rein::{
-    AmbientLight, Camera, ClearState, DirectionalLight, FrameOutput, Light, OrbitControl,
-    RobotModel, Window, WindowSettings, screen_target,
+    screen_target, AmbientLight, Camera, ClearState, DirectionalLight, FrameOutput, Light,
+    OrbitControl, RobotModel, Window, WindowSettings,
 };
 use std::path::Path;
 

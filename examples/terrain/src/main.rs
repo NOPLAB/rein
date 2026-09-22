@@ -6,16 +6,12 @@
 
 use glam::{Mat4, Vec3};
 use rein::{
-    Camera, ClearState, ColorMaterial, DirectionalLight, FrameOutput, Gm, Light, Object,
-    OrbitControl, Terrain, TerrainLod, Window, WindowSettings, screen_target,
+    screen_target, Camera, ClearState, ColorMaterial, DirectionalLight, FrameOutput, Gm, Light,
+    Object, OrbitControl, Terrain, TerrainLod, Window, WindowSettings,
 };
 
 fn main() -> anyhow::Result<()> {
-    let window = Window::new(
-        WindowSettings::default()
-            .title("Terrain")
-            .size(1024, 768),
-    )?;
+    let window = Window::new(WindowSettings::default().title("Terrain").size(1024, 768))?;
 
     struct State {
         camera: Camera,
@@ -46,10 +42,9 @@ fn main() -> anyhow::Result<()> {
 
             // Procedural height function: rolling hills with sine waves
             let height_fn = |x: f32, z: f32| -> f32 {
-                let h = (x * 0.3).sin() * (z * 0.3).cos() * 2.0
+                (x * 0.3).sin() * (z * 0.3).cos() * 2.0
                     + (x * 0.1 + 0.5).sin() * 3.0
-                    + (z * 0.15).cos() * 2.5;
-                h
+                    + (z * 0.15).cos() * 2.5
             };
 
             let terrain = Terrain::new(

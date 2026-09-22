@@ -179,7 +179,7 @@ impl PhysicsWorld {
                 // GPU narrowphase handles sphere-sphere, sphere-box, box-sphere but NOT box-box.
                 // Fast path avoids broadphase readback by using pair_buffer directly.
                 let all_spheres = entity_map.iter().all(|e| {
-                    world.get::<&Collider>(*e).ok().is_some_and(|c| {
+                    world.get::<&Collider>(*e).is_ok_and(|c| {
                         matches!(
                             c.shape,
                             crate::ecs::components::physics::ColliderShape::Sphere { .. }
@@ -233,13 +233,7 @@ impl PhysicsWorld {
             Self::run_cpu_narrowphase(world, &pairs, &mut self.contacts);
         }
 
-        self.contact_cache.warm_start(&mut self.contacts);
-        solver::solve_contacts(&mut self.contacts, world, self.config.solver_iterations);
-        self.contact_cache.update(&self.contacts);
-        rigid_body::integrate_positions(world, dt);
-        rigid_body::sync_transforms(world);
-        rigid_body::clear_forces(world);
-        rigid_body::update_sleep_states(world, dt);
+        self.solve_and_integrate(world, dt);
     }
 
     fn fixed_step(&mut self, world: &mut hecs::World, dt: f32) {
@@ -256,25 +250,17 @@ impl PhysicsWorld {
         self.contacts.clear();
         Self::run_cpu_narrowphase(world, &pairs, &mut self.contacts);
 
-        // 5. Warm-start from cached impulses
+        self.solve_and_integrate(world, dt);
+    }
+
+    /// Resolve the contacts collected by either broadphase path and finish the step.
+    fn solve_and_integrate(&mut self, world: &mut hecs::World, dt: f32) {
         self.contact_cache.warm_start(&mut self.contacts);
-
-        // 6. Solve contact constraints
         solver::solve_contacts(&mut self.contacts, world, self.config.solver_iterations);
-
-        // 7. Update contact cache for next frame
         self.contact_cache.update(&self.contacts);
-
-        // 8. Integrate positions
         rigid_body::integrate_positions(world, dt);
-
-        // 9. Synchronize transforms
         rigid_body::sync_transforms(world);
-
-        // 10. Clear force accumulators
         rigid_body::clear_forces(world);
-
-        // 11. Update sleep states
         rigid_body::update_sleep_states(world, dt);
     }
 

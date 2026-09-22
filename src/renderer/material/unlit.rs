@@ -1,5 +1,6 @@
 //! Unlit material for UI elements and debug visualization
 
+use super::common::{uniform_binding, uniform_layout};
 use super::traits::{Material, ModelUniform};
 use crate::context::WgpuContext;
 use crate::core::buffer::RawUniformBuffer;
@@ -39,38 +40,18 @@ impl UnlitMaterial {
         let shader = include_str!("../../shaders/unlit.wgsl");
 
         // Camera bind group layout (group 0)
-        let camera_bind_group_layout =
-            ctx.device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("unlit camera bind group layout"),
-                    entries: &[wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::VERTEX,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    }],
-                });
+        let camera_bind_group_layout = uniform_layout(
+            ctx,
+            "unlit camera bind group layout",
+            wgpu::ShaderStages::VERTEX,
+        );
 
         // Model bind group layout (group 1)
-        let model_bind_group_layout =
-            ctx.device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("unlit model bind group layout"),
-                    entries: &[wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::VERTEX,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    }],
-                });
+        let model_bind_group_layout = uniform_layout(
+            ctx,
+            "unlit model bind group layout",
+            wgpu::ShaderStages::VERTEX,
+        );
 
         let pipeline = PipelineBuilder::new(ctx)
             .label("unlit material pipeline")
@@ -85,36 +66,20 @@ impl UnlitMaterial {
             .build()?;
 
         // Create camera uniform buffer
-        let camera_buffer = RawUniformBuffer::new(
+        let (camera_buffer, camera_bind_group) = uniform_binding(
             ctx,
+            &camera_bind_group_layout,
             size_of::<CameraUniform>() as u64,
-            Some("unlit camera uniform"),
+            "unlit camera uniform",
         );
-
-        let camera_bind_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("unlit camera bind group"),
-            layout: &camera_bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: camera_buffer.buffer().as_entire_binding(),
-            }],
-        });
 
         // Create model uniform buffer
-        let model_buffer = RawUniformBuffer::new(
+        let (model_buffer, model_bind_group) = uniform_binding(
             ctx,
+            &model_bind_group_layout,
             size_of::<ModelUniform>() as u64,
-            Some("unlit model uniform"),
+            "unlit model uniform",
         );
-
-        let model_bind_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("unlit model bind group"),
-            layout: &model_bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: model_buffer.buffer().as_entire_binding(),
-            }],
-        });
 
         Ok(Self {
             pipeline,

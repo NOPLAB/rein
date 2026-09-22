@@ -62,13 +62,13 @@ impl Projection {
                 aspect,
                 near,
                 far,
-            } => Mat4::perspective_rh(fov, aspect, near, far),
+            } => glam::camera::rh::proj::directx::perspective(fov, aspect, near, far),
             Self::Orthographic {
                 width,
                 height,
                 near,
                 far,
-            } => Mat4::orthographic_rh(
+            } => glam::camera::rh::proj::directx::orthographic(
                 -width / 2.0,
                 width / 2.0,
                 -height / 2.0,
@@ -199,7 +199,7 @@ impl Viewer for Camera {
     }
 
     fn view_matrix(&self) -> Mat4 {
-        Mat4::look_at_rh(self.position, self.target, self.up)
+        glam::camera::rh::view::look_at_mat4(self.position, self.target, self.up)
     }
 
     fn projection_matrix(&self) -> Mat4 {
