@@ -57,8 +57,8 @@ fn solve_manifold(manifold: &mut ContactManifold, world: &hecs::World) {
     }
 
     let normal = manifold.normal;
-    let restitution = (rb_a_data.restitution + rb_b_data.restitution) * 0.5;
-    let friction = (rb_a_data.friction + rb_b_data.friction) * 0.5;
+    let restitution = f32::midpoint(rb_a_data.restitution, rb_b_data.restitution);
+    let friction = f32::midpoint(rb_a_data.friction, rb_b_data.friction);
 
     for contact in &mut manifold.contacts {
         // Compute relative velocity at contact point

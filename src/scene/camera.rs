@@ -204,7 +204,7 @@ impl OrbitCamera {
         }
         let ndc = clip.truncate() / clip.w;
         Some(Vec3::new(
-            self.viewport_origin.x + (ndc.x + 1.0) * 0.5 * self.viewport_size.x,
+            self.viewport_origin.x + f32::midpoint(ndc.x, 1.0) * self.viewport_size.x,
             self.viewport_origin.y + (1.0 - ndc.y) * 0.5 * self.viewport_size.y,
             ndc.z,
         ))

@@ -847,7 +847,7 @@ mod tests {
         assert_eq!(t.tabs_of("c"), Some(a));
         // The emptied group is gone and the split has two children.
         assert!(matches!(t.root(), Some(DockNode::Split { children, .. }) if children.len() == 2));
-        assert!(t.active_of(a).as_deref() == Some("c"));
+        assert_eq!(t.active_of(a).as_deref(), Some("c"));
         assert_ne!(t.tabs_of("c"), Some(c));
     }
 
